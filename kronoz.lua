@@ -1,1 +1,1 @@
-i love kronoz
+https://roomcord.dpdns.org/api/loader?id=PtUqRaGI
