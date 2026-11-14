@@ -224,11 +224,18 @@ local catCache = {}
 -- Subcategory 19=Accessories 56=ClassicShirts 57=ClassicPants 37=Bundles 38=AnimationBundles 39=Emote 15=Heads
 -- CreatorTargetId=1 & CreatorType=1  -> dibuat oleh Roblox (akun "Roblox")
 -- SortType 5 = harga tertinggi dulu
+-- mode 1 = lengkap (kreator Roblox + urut harga)
+-- mode 2 = tanpa filter kreator di URL (disaring di client)
+-- mode 3 = tanpa urut harga (disortir di client)
+-- mode 4 = tanpa Subcategory
+-- mode 5 = minimal (Category + Limit saja)
 local function buildUrl(t, kw, cursor, sortType, mode)
     local q = {"Category=" .. t.cat, "Limit=30"}
-    if t.sub then table.insert(q, "Subcategory=" .. t.sub) end
-    table.insert(q, "SortType=" .. ((mode >= 3) and 0 or sortType))
-    table.insert(q, "SortAggregation=5")
+    if t.sub and mode <= 3 then table.insert(q, "Subcategory=" .. t.sub) end
+    if mode <= 4 then
+        table.insert(q, "SortType=" .. ((mode >= 3) and 0 or sortType))
+        table.insert(q, "SortAggregation=5")
+    end
     if mode == 1 and not t.anyCreator then
         table.insert(q, "CreatorTargetId=1")
         table.insert(q, "CreatorType=1")
@@ -238,12 +245,9 @@ local function buildUrl(t, kw, cursor, sortType, mode)
     return "https://catalog.roblox.com/v1/search/items/details?" .. table.concat(q, "&")
 end
 
--- mode 1 = lengkap (kreator Roblox + urut harga)
--- mode 2 = tanpa filter kreator di URL (disaring di client)
--- mode 3 = tanpa urut harga (disortir di client)
 local function fetchCatalog(t, kw, cursor, sortType, startMode)
     local lastErr = "unknown"
-    for mode = startMode or 1, 3 do
+    for mode = startMode or 1, 5 do
         local url = buildUrl(t, kw, cursor, sortType, mode)
         local hit = catCache[url]
         if hit then return hit[1], hit[2], mode end
@@ -257,7 +261,7 @@ local function fetchCatalog(t, kw, cursor, sortType, startMode)
             end
             lastErr = "Respons tidak valid"
         else
-            lastErr = err or lastErr
+            lastErr = (err or lastErr) .. " (mode " .. mode .. ")"
         end
     end
     return nil, lastErr
@@ -3583,6 +3587,29 @@ local BODY_PROPS = {[17] = "Head", [18] = "Face", [27] = "Torso", [28] = "RightA
     [29] = "LeftArm", [30] = "LeftLeg", [31] = "RightLeg"}
 local BODY_FIELDS = {"Head", "Torso", "LeftArm", "RightArm", "LeftLeg", "RightLeg", "Face"}
 local SCALE_FIELDS = {"HeightScale", "WidthScale", "HeadScale", "DepthScale", "ProportionScale", "BodyTypeScale"}
+-- Korless = kepala hilang (Headless Head) + kaki kanan Korblox Deathspeaker
+local KORLESS_HEAD = 134082579
+local KORLESS_LEG = 139607718
+local korlessPrev = nil
+btn(pBody, "Apply Korless (kepala hilang + Korblox kaki kanan)", function()
+    if not korlessPrev then
+        korlessPrev = {head = Clone.getOverride("Head"), leg = Clone.getOverride("RightLeg")}
+    end
+    Clone.setOverride("Head", KORLESS_HEAD)
+    Clone.setOverride("RightLeg", KORLESS_LEG)
+    Clone.setOverride("_korless", true)
+    say("Memasang Korless...")
+    recopy("Korless terpasang (lokal)")
+end)
+btn(pBody, "Reset Korless", function()
+    local prev = korlessPrev or {}
+    Clone.setOverride("Head", prev.head)
+    Clone.setOverride("RightLeg", prev.leg)
+    Clone.setOverride("_korless", nil)
+    korlessPrev = nil
+    if Clone.isActive() then recopy("Korless dilepas") else say("Tidak ada perubahan") end
+end)
+
 local bodyB = makeBrowser(pBody, "Cari body / head (nama) atau ID bundle", {
     {label = "Body Bundle", cat = 4, sub = 37, allow = {Bundle = true}, numType = "Bundle"},
     {label = "Head", cat = 4, sub = 15, allow = {Asset = true}, at = {[17] = true}},
