@@ -340,6 +340,34 @@ function F.loadingMulai()
 	return H
 end
 
+-- SUARA KLIK: dipilih otomatis dari beberapa ID (yang pertama bisa dimuat dipakai), dipasang ke semua tombol
+F.KLIK_IDS = {"rbxassetid://421058925", "rbxassetid://6895079853", "rbxasset://sounds/button.wav", "rbxasset://sounds/switch.wav"}
+function F.klikPilih()
+	local CP = game:GetService("ContentProvider")
+	for _, id in ipairs(F.KLIK_IDS) do
+		local s = Instance.new("Sound"); s.SoundId = id
+		pcall(function() CP:PreloadAsync({s}) end)
+		local ok = false
+		pcall(function() ok = s.TimeLength > 0 end)
+		s:Destroy()
+		if ok then F.KLIK_ID = id; return end
+	end
+end
+function F.klik()
+	if S.klikOn == false or not F.KLIK_ID then return end
+	local g = S.ui and S.ui.gui
+	if not g or not g.Parent then return end
+	local s = Instance.new("Sound")
+	s.SoundId = F.KLIK_ID; s.Volume = 0.55; s.PlaybackSpeed = 0.96 + math.random() * 0.12
+	s.Parent = g; s:Play()
+	game:GetService("Debris"):AddItem(s, 2)
+end
+function F.pasangKlik(b)
+	if b:GetAttribute("ogKlik") then return end
+	b:SetAttribute("ogKlik", true)
+	b.MouseButton1Click:Connect(F.klik)
+end
+
 -- seluruh efek laut untuk jendela utama (dipanggil setelah semua panel dibuat)
 function F.lautJendela(root)
 	F.sinarLaut(root, 29)
@@ -11312,6 +11340,7 @@ function F.pgProfil(page)
 		local kunci = d[3]
 		b.MouseButton1Click:Connect(function() task.spawn(F.aman, function() if S.ui.tampil then S.ui.tampil(kunci) end end) end)
 	end
+	F.togelDesk(page, nx, "Suara klik", "Bunyi saat tombol ditekan", function() return S.klikOn ~= false end, function(v) S.klikOn = v and true or false end)
 end
 
 -- PENGATURAN (dibuka dari tombol gear): sidebar kategori di kiri, isi di kanan.
@@ -12145,9 +12174,11 @@ local function bangunUtama()
 	-- hover & tekan untuk semua tombol (termasuk yang dibuat belakangan)
 	for _, d in ipairs(gui:GetDescendants()) do
 		if d:IsA("TextButton") then pasangEfek(d) end
+		if d:IsA("TextButton") or d:IsA("ImageButton") then F.pasangKlik(d) end
 	end
 	gui.DescendantAdded:Connect(function(d)
 		if d:IsA("TextButton") then task.defer(pasangEfek, d) end
+		if d:IsA("TextButton") or d:IsA("ImageButton") then task.defer(F.pasangKlik, d) end
 	end)
 	F.catat("siap. OCTAGRUB jalan")
 end
@@ -12194,6 +12225,7 @@ do
     end
 end
 pcall(function() F.loadingH = F.loadingMulai() end)
+task.spawn(function() pcall(F.klikPilih) end)
 local ok, err = xpcall(function()
     task.wait(0.3)
     S.tier = "vvip"; S.premium = true
