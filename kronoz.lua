@@ -1,5 +1,5 @@
---[[
-	KRONOZ | version 1.6
+ --[[
+	OCTAGRUB | version 1.0
 ]]
 
 -- =====================================================================
@@ -18,18 +18,18 @@ local TS = game:GetService("TweenService")
 local me = Players.LocalPlayer
 local httpReq = (syn and syn.request) or (http and http.request) or http_request or request
 
-local OR = Color3.fromRGB(225, 32, 45)   -- aksen merah
+local OR = Color3.fromRGB(0, 214, 201)    -- aksen aqua
 local BLK = Color3.new(0, 0, 0)
-local BG = Color3.fromRGB(8, 8, 10)       -- background utama
-local HD = Color3.fromRGB(12, 12, 14)      -- header & footer
-local SIDE = Color3.fromRGB(12, 12, 14)    -- sidebar
-local ROW = Color3.fromRGB(17, 17, 19)     -- container & input
-local BTN = Color3.fromRGB(23, 23, 26)     -- tombol
-local ACT = Color3.fromRGB(176, 28, 38)    -- elemen aktif
-local OFF = Color3.fromRGB(48, 48, 48)     -- #303030 toggle mati
-local BRD = Color3.fromRGB(45, 40, 42)     -- border
+local BG = Color3.fromRGB(4, 20, 34)       -- laut dalam
+local HD = Color3.fromRGB(6, 28, 46)       -- header & footer
+local SIDE = Color3.fromRGB(6, 28, 46)     -- sidebar
+local ROW = Color3.fromRGB(9, 38, 60)      -- container & input
+local BTN = Color3.fromRGB(13, 50, 76)     -- tombol
+local ACT = Color3.fromRGB(0, 140, 156)    -- elemen aktif
+local OFF = Color3.fromRGB(36, 68, 88)     -- toggle mati
+local BRD = Color3.fromRGB(22, 84, 112)    -- border
 local TXT = Color3.fromRGB(255, 255, 255)  -- #FFFFFF teks utama
-local MUT = Color3.fromRGB(145, 145, 150)  -- teks sekunder
+local MUT = Color3.fromRGB(135, 180, 200)  -- teks sekunder
 local LOGC = Color3.fromRGB(200, 200, 200)
 local GOOD = Color3.fromRGB(220, 220, 220)
 local BAD = Color3.fromRGB(255, 255, 255)
@@ -104,14 +104,125 @@ function F.notif(judul, teks, dur)
 	pcall(function() SG:SetCore("SendNotification", {Title = judul, Text = string.sub(tostring(teks), 1, 190), Duration = dur or 4}) end)
 end
 
+
+-- =====================================================================
+-- EFEK LAUT: gelembung naik, sinar cahaya dari permukaan, gelembung minimize
+-- (semua fungsi pakai F.* supaya tidak menambah variabel lokal di chunk utama)
+-- =====================================================================
+function F.gelembung(parent, jumlah, z)
+	local layer = Instance.new("Frame")
+	layer.Name = "OG_Gelembung"; layer.BackgroundTransparency = 1; layer.BorderSizePixel = 0
+	layer.Size = UDim2.new(1, 0, 1, 0); layer.ZIndex = z or 30; layer.Active = false
+	layer.ClipsDescendants = true; layer.Parent = parent
+	local rng = Random.new()
+	for i = 1, jumlah do
+		local ukuran = rng:NextInteger(6, 22)
+		local b = Instance.new("Frame")
+		b.Name = "g"; b.AnchorPoint = Vector2.new(0.5, 0.5); b.BorderSizePixel = 0; b.Active = false
+		b.Size = UDim2.new(0, ukuran, 0, ukuran); b.BackgroundColor3 = Color3.fromRGB(150, 245, 240)
+		b.BackgroundTransparency = 0.88; b.ZIndex = layer.ZIndex; b.Visible = false; b.Parent = layer
+		local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(1, 0); c.Parent = b
+		local s = Instance.new("UIStroke"); s.Color = Color3.fromRGB(190, 252, 250); s.Thickness = 1; s.Transparency = 0.45; s.Parent = b
+		-- kilau kecil di sudut kiri atas
+		local k = Instance.new("Frame"); k.BorderSizePixel = 0; k.Active = false; k.BackgroundColor3 = Color3.new(1, 1, 1)
+		k.BackgroundTransparency = 0.35; k.Size = UDim2.new(0.22, 0, 0.22, 0); k.Position = UDim2.new(0.2, 0, 0.18, 0); k.ZIndex = layer.ZIndex
+		k.Parent = b
+		local kc = Instance.new("UICorner"); kc.CornerRadius = UDim.new(1, 0); kc.Parent = k
+		task.spawn(function()
+			task.wait(rng:NextNumber(0, 6))
+			while layer.Parent do
+				local x0 = rng:NextNumber(0.04, 0.96)
+				local x1 = math.clamp(x0 + rng:NextNumber(-0.08, 0.08), 0.02, 0.98)
+				local dur = rng:NextNumber(5, 11) * (22 / (ukuran + 8)) ^ 0.35
+				b.Position = UDim2.new(x0, 0, 1.06, 0); b.Visible = true
+				local t = TS:Create(b, TweenInfo.new(dur, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Position = UDim2.new(x1, 0, -0.08, 0)})
+				t:Play()
+				t.Completed:Wait()
+				b.Visible = false
+				task.wait(rng:NextNumber(0, 2.5))
+			end
+		end)
+	end
+	return layer
+end
+
+function F.sinarLaut(parent, z)
+	local layer = Instance.new("Frame")
+	layer.Name = "OG_Sinar"; layer.BackgroundTransparency = 1; layer.BorderSizePixel = 0; layer.Active = false
+	layer.Size = UDim2.new(1, 0, 1, 0); layer.ZIndex = z or 29; layer.ClipsDescendants = true; layer.Parent = parent
+	for i = 1, 4 do
+		local r = Instance.new("Frame")
+		r.BorderSizePixel = 0; r.Active = false; r.BackgroundColor3 = Color3.fromRGB(160, 250, 245)
+		r.AnchorPoint = Vector2.new(0.5, 0); r.Rotation = -18
+		r.Size = UDim2.new(0, 46 + i * 14, 1.6, 0); r.Position = UDim2.new(0.12 + i * 0.2, 0, -0.2, 0)
+		r.BackgroundTransparency = 0.92; r.ZIndex = layer.ZIndex; r.Parent = layer
+		local g = Instance.new("UIGradient")
+		g.Rotation = 90
+		g.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.55), NumberSequenceKeypoint.new(0.6, 0.9), NumberSequenceKeypoint.new(1, 1)})
+		g.Parent = r
+		TS:Create(r, TweenInfo.new(4 + i * 1.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {BackgroundTransparency = 0.97, Position = UDim2.new(0.18 + i * 0.2, 0, -0.2, 0)}):Play()
+	end
+	return layer
+end
+
+-- latar air di belakang semua panel (kelihatan di celah antar panel) + garis gelombang di bawah header
+function F.airLaut(root, headH)
+	local air = Instance.new("Frame")
+	air.Name = "OG_Air"; air.BorderSizePixel = 0; air.Active = false; air.BackgroundColor3 = Color3.new(1, 1, 1)
+	air.Size = UDim2.new(1, 0, 1, 0); air.Parent = root
+	local g = Instance.new("UIGradient"); g.Rotation = 90
+	g.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(8, 72, 104)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(4, 34, 58)), ColorSequenceKeypoint.new(1, Color3.fromRGB(2, 12, 24))})
+	g.Parent = air
+	local garis = Instance.new("Frame")
+	garis.Name = "OG_Gelombang"; garis.BorderSizePixel = 0; garis.Active = false; garis.BackgroundColor3 = Color3.new(1, 1, 1)
+	garis.Size = UDim2.new(1, -28, 0, 2); garis.Position = UDim2.new(0, 14, 0, headH); garis.ZIndex = 5; garis.Parent = root
+	local gg = Instance.new("UIGradient")
+	gg.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(4, 40, 66)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(60, 240, 226)), ColorSequenceKeypoint.new(1, Color3.fromRGB(4, 40, 66))})
+	gg.Offset = Vector2.new(-1, 0); gg.Parent = garis
+	TS:Create(gg, TweenInfo.new(3.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Offset = Vector2.new(1, 0)}):Play()
+end
+
+-- tombol minimize: berubah jadi satu gelembung besar bertuliskan OG yang melayang pelan
+function F.gelembungMini(mini)
+	mini.Image = ""; mini.BackgroundColor3 = Color3.fromRGB(0, 120, 140); mini.BackgroundTransparency = 0.18
+	mini.Size = UDim2.new(0, 48, 0, 48); mini.ZIndex = 40
+	local st = mini:FindFirstChildOfClass("UIStroke")
+	if st then st.Color = Color3.fromRGB(170, 252, 248); st.Thickness = 2; st.Transparency = 0.1 end
+	local cr = mini:FindFirstChildOfClass("UICorner")
+	if cr then cr.CornerRadius = UDim.new(1, 0) end
+	local gr = Instance.new("UIGradient"); gr.Rotation = 60
+	gr.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(190, 255, 250)), ColorSequenceKeypoint.new(1, Color3.fromRGB(60, 170, 200))})
+	gr.Parent = mini
+	local t = Instance.new("TextLabel"); t.BackgroundTransparency = 1; t.Size = UDim2.new(1, 0, 1, 0); t.Text = "OG"
+	t.Font = Enum.Font.GothamBlack; t.TextSize = 16; t.TextColor3 = Color3.new(1, 1, 1); t.ZIndex = 41; t.Parent = mini
+	local k = Instance.new("Frame"); k.BorderSizePixel = 0; k.BackgroundColor3 = Color3.new(1, 1, 1); k.BackgroundTransparency = 0.25
+	k.Size = UDim2.new(0, 10, 0, 10); k.Position = UDim2.new(0.18, 0, 0.14, 0); k.ZIndex = 41; k.Parent = mini
+	local kc = Instance.new("UICorner"); kc.CornerRadius = UDim.new(1, 0); kc.Parent = k
+	local ds = Instance.new("UIScale"); ds.Name = "OG_Denyut"; ds.Parent = mini
+	TS:Create(ds, TweenInfo.new(1.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Scale = 1.08}):Play()
+end
+
+-- gelembung minimize muncul seperti "pop"
+function F.gelembungMuncul(mini)
+	local kecil = mini:FindFirstChild("OG_Denyut")
+	mini.Size = UDim2.new(0, 0, 0, 0); mini.Visible = true
+	TS:Create(mini, TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 48, 0, 48)}):Play()
+end
+
+-- seluruh efek laut untuk jendela utama (dipanggil setelah semua panel dibuat)
+function F.lautJendela(root)
+	F.sinarLaut(root, 29)
+	F.gelembung(root, 16, 30)
+end
+
 -- =====================================================================
 -- KONFIGURASI
 -- =====================================================================
 local C = {
-	NAMA = "KRONOZ", VERSI = "V9",
+	NAMA = "OCTAGRUB", VERSI = "V9",
 	CREDIT = {"OWNER: RAXZY", "DEV: yura", "DONATUR: tamagaz", "TIKTOK OWNER: raxzy369"},
 	PERINGATAN = "HOLA",
-	FILE_SKIN = "zenox_skin.json", SLOT_SKIN = 5, FILE_AUTO = "KRONOZ_auto.json",
+	FILE_SKIN = "zenox_skin.json", SLOT_SKIN = 5, FILE_AUTO = "OCTAGRUB_auto.json",
 	EMOTE = { {nama = "Tomato Dance", id = 125871567269726}, {nama = "Michael Jackson", id = 140440735589603}, {nama = "L Dance", id = 114846964045392}, {nama = "FF Push Up", id = 73630423562709}, {nama = "Break your leg", id = 117057554612284} },
 	-- tab Index: nama dan lidg (link id gambar). Tes 1 item dulu, kalau gambar tampil tambah item lain.
 	INDEX = {
@@ -142,7 +253,7 @@ local C = {
 	RAMBUT_GANTI = {[98310432834620] = true, [110450103676376] = true, [16630147] = true, [15563758601] = true, [72774691792757] = true, [139101716417676] = true, [126541017138655] = true, [131251657230383] = true, [130933973014024] = true},
 	SECRET_ID = 109520550485360,
 	WEBHOOK_CLONE = "", -- kosong = pakai WEBHOOK_SARAN
-	WEBHOOK_SARAN = "https://discord.com/api/webhooks/1564188976942948413/iRLP4kuY8qljhxO_iW5FTGctWSPqpI4TlJaBh8W-79JPxZCVfGekxpYGwxFVIHF_5lTp",
+	WEBHOOK_SARAN = "", -- isi dengan webhook Discord milikmu sendiri kalau mau fitur Saran / log clone aktif
 	DOMINUS_ID = 21070012,
 	-- item khusus key PREMIUM
 	PREMIUM = {[109520550485360] = true},
@@ -327,7 +438,7 @@ function F.catat(t)
 	local s = tostring(t)
 	table.insert(S.logs, "[" .. (okT and w or "--") .. "] " .. s)
 	while #S.logs > 200 do table.remove(S.logs, 1) end
-	print("KRONOZ " .. s)
+	print("OCTAGRUB " .. s)
 	local ui = S.ui
 	if ui.logBox then ui.logBox.Text = table.concat(S.logs, "\n") end
 	if ui.statusBox then
@@ -335,7 +446,7 @@ function F.catat(t)
 		local buruk = string.find(s, "gagal") ~= nil or string.find(s, "error") ~= nil or string.find(s, "DIHAPUS") ~= nil
 		ui.statusBox.TextColor3 = buruk and BAD or GOOD
 	end
-	if string.find(s, "error") then F.notif("KRONOZ ERROR", s, 6) end
+	if string.find(s, "error") then F.notif("OCTAGRUB ERROR", s, 6) end
 end
 function F.aman(fn) local ok, e = pcall(fn); if not ok then F.catat("error: " .. string.sub(tostring(e), 1, 140)) end end
 
@@ -882,7 +993,7 @@ end
 function F.pilihKe(it) S.pilih = it; F.pilihRender(); F.segarkanUI(); F.catat("dipilih: " .. it.nama) end
 -- FAVORIT: id item favorit, disimpan ke file supaya tetap ada setelah script dijalankan lagi
 S.favSet = {}
-local FAV_FILE = "KRONOZ_favorit.json"
+local FAV_FILE = "OCTAGRUB_favorit.json"
 function F.favSimpan()
 	local daftar = {}
 	for id, v in pairs(S.favSet) do if v then table.insert(daftar, id) end end
@@ -1540,7 +1651,7 @@ function F.autoJalan()
 		while S.ui.gui and S.ui.gui.Parent do task.wait(2); pcall(F.autoSimpan) end
 	end)
 end
-F.AUTO_KODE = 'loadstring(readfile("KRONOZ.lua"))()'
+F.AUTO_KODE = 'loadstring(readfile("Octagrub.lua"))()'
 -- AUTO EXECUTE: kode loader dimasukkan ke queue_on_teleport, jadi script jalan lagi setelah pindah server
 function F.autoExecAntri()
 	local q = queue_on_teleport or (syn and syn.queue_on_teleport)
@@ -2485,7 +2596,7 @@ function F.watchStep()
 					it.on = false; it.riwayat = {}; it.jedaSampai = 0
 					if it.set then it.set(false) end
 					F.catat(it.nama .. " DIHENTIKAN: dihapus game 5x dalam 10 detik")
-					F.notif("KRONOZ", it.nama .. " dihentikan, sering dihapus game", 5)
+					F.notif("OCTAGRUB", it.nama .. " dihentikan, sering dihapus game", 5)
 				else
 					-- pasang ulang dijadwalkan, jeda minimal 2 detik antar pemasangan
 					local tunggu = math.max(0, (it.jedaSampai or 0) - sekarang)
@@ -2532,7 +2643,7 @@ function F.prevMilikKita(vp)
 	if not sg then return false end
 	if S.ui and S.ui.gui and sg == S.ui.gui then return true end
 	local nm = string.lower(sg.Name)
-	return string.find(nm, "kronoz", 1, true) ~= nil or string.find(nm, "zenox", 1, true) ~= nil
+	return string.find(nm, "octagrub", 1, true) ~= nil or string.find(nm, "zenox", 1, true) ~= nil
 end
 function F.prevCharModel(m)
 	if not m:IsA("Model") then return false end
@@ -2821,16 +2932,16 @@ function F.prevStep()
 	end
 	if next(P.models) ~= nil and not P.conn then
 		P.conn = true
-		RS:BindToRenderStep("KronozPrev", Enum.RenderPriority.Last.Value, F.prevFrame)
+		RS:BindToRenderStep("OctagrubPrev", Enum.RenderPriority.Last.Value, F.prevFrame)
 	elseif next(P.models) == nil and P.conn then
-		pcall(function() RS:UnbindFromRenderStep("KronozPrev") end); P.conn = nil
+		pcall(function() RS:UnbindFromRenderStep("OctagrubPrev") end); P.conn = nil
 	end
 end
 function F.prevBersihSemua()
 	local P = F.prev
 	for m, p in pairs(P.models) do pcall(F.prevBersih, m, p) end
 	P.models = {}
-	if P.conn then pcall(function() RS:UnbindFromRenderStep("KronozPrev") end); P.conn = nil end
+	if P.conn then pcall(function() RS:UnbindFromRenderStep("OctagrubPrev") end); P.conn = nil end
 	if P.addConn then P.addConn:Disconnect(); P.addConn = nil end
 	P.hook = false; P.vps = {}
 end
@@ -3201,8 +3312,8 @@ function F.urutanTeks()
 	return table.concat(b, "\n")
 end
 function F.salin(teks, pesan)
-	if setclipboard then setclipboard(teks); F.notif("KRONOZ", pesan, 3)
-	else F.notif("KRONOZ", "executor ini tidak punya fungsi salin", 4) end
+	if setclipboard then setclipboard(teks); F.notif("OCTAGRUB", pesan, 3)
+	else F.notif("OCTAGRUB", "executor ini tidak punya fungsi salin", 4) end
 end
 function F.pasangAvatarKode(teks)
 	local daftar, sudah = {}, {}
@@ -3263,7 +3374,7 @@ function F.siapLogoAdmin()
             for _, url in ipairs({F.LOGO_ADMIN_PNG, F.LOGO_ADMIN_ASLI}) do
                 local okR, resp = pcall(function() return httpReq({Url = url, Method = "GET"}) end)
                 if okR and type(resp) == "table" and type(resp.Body) == "string" and #resp.Body > 64 and (resp.StatusCode == nil or resp.StatusCode == 200) then
-                    local nama = "kronoz_logo_admin.png"
+                    local nama = "octagrub_logo_admin.png"
                     if pcall(writefile, nama, resp.Body) then
                         local okA, aset = pcall(getcustomasset, nama)
                         if okA and aset then F.logoAdminAset = aset; return end
@@ -3276,8 +3387,8 @@ function F.siapLogoAdmin()
 end
 -- badge admin di tab Profil: logo besar; kalau gambar tidak termuat dalam 8 detik, perisai merah dari bentuk UI
 function F.badgeAdmin(induk)
-    local b = mk("ImageLabel", {Name = "KronozAdmin", Size = UDim2.new(0, 38, 0, 38), BackgroundTransparency = 1, BorderSizePixel = 0, ScaleType = Enum.ScaleType.Fit, ZIndex = induk.ZIndex + 1}, induk)
-    local cadangan = mk("Frame", {Name = "KronozAdminCadangan", Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, BorderSizePixel = 0, Visible = false, ZIndex = b.ZIndex}, b)
+    local b = mk("ImageLabel", {Name = "OctagrubAdmin", Size = UDim2.new(0, 38, 0, 38), BackgroundTransparency = 1, BorderSizePixel = 0, ScaleType = Enum.ScaleType.Fit, ZIndex = induk.ZIndex + 1}, induk)
+    local cadangan = mk("Frame", {Name = "OctagrubAdminCadangan", Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, BorderSizePixel = 0, Visible = false, ZIndex = b.ZIndex}, b)
     local perisai = mk("Frame", {Size = UDim2.new(0, 26, 0, 26), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Rotation = 45, BackgroundColor3 = Color3.fromRGB(200, 25, 35), BorderSizePixel = 0, ZIndex = b.ZIndex}, cadangan)
     rnd(perisai, 8)
     mk("UIStroke", {Color = Color3.fromRGB(220, 224, 232), Thickness = 1.5}, perisai)
@@ -3370,11 +3481,11 @@ function F.centangDiChat(d, root)
 	end
 	return false
 end
--- UI KRONOZ sendiri (ditandai atribut KronozUI) tidak pernah diberi badge, termasuk sisa instance lama
+-- UI OCTAGRUB sendiri (ditandai atribut OctagrubUI) tidak pernah diberi badge, termasuk sisa instance lama
 function F.diUI(d)
 	local c = d
 	while c do
-		local okA, tanda = pcall(function() return c:GetAttribute("KronozUI") end)
+		local okA, tanda = pcall(function() return c:GetAttribute("OctagrubUI") end)
 		if okA and tanda then return true end
 		c = c.Parent
 	end
@@ -3382,9 +3493,9 @@ function F.diUI(d)
 end
 -- badge admin di samping nama kita (leaderboard, daftar pemain, nametag). tidak perlu centang
 function F.badgeAdminLB(induk)
-	local b = mk("ImageLabel", {Name = "KronozAdminLB", Size = UDim2.new(0, 14, 0, 14), BackgroundTransparency = 1, BorderSizePixel = 0, ScaleType = Enum.ScaleType.Fit, Image = F.logoAdminAset or F.LOGO_ADMIN_ASLI, ZIndex = induk.ZIndex + 1}, induk)
+	local b = mk("ImageLabel", {Name = "OctagrubAdminLB", Size = UDim2.new(0, 14, 0, 14), BackgroundTransparency = 1, BorderSizePixel = 0, ScaleType = Enum.ScaleType.Fit, Image = F.logoAdminAset or F.LOGO_ADMIN_ASLI, ZIndex = induk.ZIndex + 1}, induk)
 	-- kalau logo belum termuat (mis. link tidak bisa dibuka), tampilkan perisai merah supaya badge tetap terlihat
-	local cadangan = mk("Frame", {Name = "KronozAdminLBCadangan", Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, BorderSizePixel = 0, Visible = false, ZIndex = b.ZIndex}, b)
+	local cadangan = mk("Frame", {Name = "OctagrubAdminLBCadangan", Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, BorderSizePixel = 0, Visible = false, ZIndex = b.ZIndex}, b)
 	local perisai = mk("Frame", {Size = UDim2.new(0.72, 0, 0.72, 0), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Rotation = 45, BackgroundColor3 = Color3.fromRGB(200, 25, 35), BorderSizePixel = 0, ZIndex = b.ZIndex}, cadangan)
 	rnd(perisai, 3)
 	mk("UIStroke", {Color = Color3.fromRGB(220, 224, 232), Thickness = 1}, perisai)
@@ -3440,7 +3551,7 @@ function F.centangTempel()
 						local geserBiru = 0
 						if adaAdmin then
 							local ukAdmin = math.max(16, math.floor((d.TextSize or 14) * 1.5))
-							local lb = d:FindFirstChild("KronozAdminLB") or F.badgeAdminLB(d)
+							local lb = d:FindFirstChild("OctagrubAdminLB") or F.badgeAdminLB(d)
 							local gambar = F.logoAdminAset or F.LOGO_ADMIN_ASLI
 							if lb.Image ~= gambar then lb.Image = gambar end
 							lb.Visible = true
@@ -3489,7 +3600,7 @@ function F.bersihBadge()
 	if okC and cg then table.insert(akar, cg) end
 	for _, r in ipairs(akar) do
 		for _, d in ipairs(r:GetDescendants()) do
-			if d.Name == "ZenoxCentang" or d.Name == "ZenoxRuang" or d.Name == "KronozAdminLB" then pcall(function() d:Destroy() end) end
+			if d.Name == "ZenoxCentang" or d.Name == "ZenoxRuang" or d.Name == "OctagrubAdminLB" then pcall(function() d:Destroy() end) end
 			if (d:IsA("TextLabel") or d:IsA("TextButton")) and d:GetAttribute("ZenoxSpasiTeks") ~= nil then
 				pcall(function()
 					if d.Text == d:GetAttribute("ZenoxSpasiTeks") and d:GetAttribute("ZenoxTeksAsli") ~= nil then d.Text = d:GetAttribute("ZenoxTeksAsli") end
@@ -5710,12 +5821,12 @@ local function kirimLogClone(targetRaw, mode)
 	local okR, res
 	if #txt + 8 <= 2000 then
 		-- muat dalam satu pesan: isi di dalam blok kode (tombol salin Discord)
-		local isi = HS:JSONEncode({username = "KRONOZ LARPER LOG", content = "```\n" .. txt .. "\n```"})
+		local isi = HS:JSONEncode({username = "OCTAGRUB LARPER LOG", content = "```\n" .. txt .. "\n```"})
 		okR, res = pcall(httpReq, {Url = url, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = isi})
 	else
 		-- terlalu panjang untuk satu pesan Discord: kirim sebagai file .txt (tetap satu pesan)
-		local batas = "KRONOZ" .. tostring(math.random(100000, 999999))
-		local payload = HS:JSONEncode({username = "KRONOZ LARPER LOG", content = "Log clone (panjang, dikirim sebagai file .txt)"})
+		local batas = "OCTAGRUB" .. tostring(math.random(100000, 999999))
+		local payload = HS:JSONEncode({username = "OCTAGRUB LARPER LOG", content = "Log clone (panjang, dikirim sebagai file .txt)"})
 		local isi = "--" .. batas .. "\r\nContent-Disposition: form-data; name=\"payload_json\"\r\nContent-Type: application/json\r\n\r\n" .. payload
 			.. "\r\n--" .. batas .. "\r\nContent-Disposition: form-data; name=\"files[0]\"; filename=\"clone_log.txt\"\r\nContent-Type: text/plain\r\n\r\n" .. txt
 			.. "\r\n--" .. batas .. "--\r\n"
@@ -5937,7 +6048,7 @@ function F.detAmbil(id)
 		S.detBusy[id] = nil
 	end)
 end
--- id item yang tampil di menu: dasar (avatar clone, atau avatar asli kita) + item yang kita pasang di kronoz
+-- id item yang tampil di menu: dasar (avatar clone, atau avatar asli kita) + item yang kita pasang di octagrub
 function F.inspectIdTerpasang()
 	local ids, urut = {}, {}
 	local function tambah(id)
@@ -6026,7 +6137,7 @@ function F.inspectTerapkan(root)
 	end
 	if not F.inspectAktif() then
 		if #kz > 0 then F.inspectBersih() end
-		F.inspectLog("nonaktif", "tidak ada item terpasang di kronoz, menu dibiarkan asli")
+		F.inspectLog("nonaktif", "tidak ada item terpasang di octagrub, menu dibiarkan asli")
 		return
 	end
 	local items = {}
@@ -6648,9 +6759,9 @@ function F.fakeSimpanFoto()
     local pg = me:FindFirstChildOfClass("PlayerGui")
     if not pg then return end
     local layar = Instance.new("ScreenGui")
-    layar.Name = "KronozFoto"; layar.ResetOnSpawn = false; layar.IgnoreGuiInset = true; layar.DisplayOrder = 20000
+    layar.Name = "OctagrubFoto"; layar.ResetOnSpawn = false; layar.IgnoreGuiInset = true; layar.DisplayOrder = 20000
     layar.Parent = pg
-    local bg = mk("Frame", {Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Color3.fromRGB(10, 10, 12), BorderSizePixel = 0}, layar)
+    local bg = mk("Frame", {Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Color3.fromRGB(4, 18, 32), BorderSizePixel = 0}, layar)
     local salin = ui.kartu:Clone()
     salin.AnchorPoint = Vector2.new(0.5, 0.5)
     salin.Position = UDim2.new(0.5, 0, 0.5, 0)
@@ -6874,7 +6985,7 @@ function F.pgFakeProfil(page)
     local user = mk("TextLabel", {Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 1, Text = "@" .. tostring(me.Name), TextColor3 = MUT, Font = FM, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, LayoutOrder = 1}, userRow)
     mk("UISizeConstraint", {MaxSize = Vector2.new(170, 18)}, user)
     local centangKartu = F.centangBadge(userRow)
-    centangKartu.Name = "KronozBadgeFakeKartu"
+    centangKartu.Name = "OctagrubBadgeFakeKartu"
     centangKartu.Size = UDim2.new(0, 12, 0, 12)
     centangKartu.LayoutOrder = 2
     centangKartu.Visible = S.centang == true
@@ -7313,7 +7424,7 @@ end
 
 -- ===================== SHARE OUTFIT 2.0 =====================
 -- edit outfit pemain lain yang ada di server. HANYA terlihat di layarmu (visual lokal), pemain lain tidak melihat apa-apa.
-F.SHARE_FILE = "KRONOZ_share.json"
+F.SHARE_FILE = "OCTAGRUB_share.json"
 function F.shBaru()
 	return {
 		target = nil, model = nil,
@@ -7452,7 +7563,7 @@ end
 function F.shHeadTerap()
 	local s = S.share; local m = s.model
 	if s.headConn then s.headConn:Disconnect(); s.headConn = nil end
-	pcall(function() RS:UnbindFromRenderStep("KronozShHead") end)
+	pcall(function() RS:UnbindFromRenderStep("OctagrubShHead") end)
 	if not m then return end
 	local hd = m:FindFirstChild("Head")
 	if s.head then
@@ -7485,7 +7596,7 @@ function F.shHeadTerap()
 		end
 		paksa()
 		s.headConn = RS.Heartbeat:Connect(paksa)
-		pcall(function() RS:BindToRenderStep("KronozShHead", 2001, paksa) end)
+		pcall(function() RS:BindToRenderStep("OctagrubShHead", 2001, paksa) end)
 	elseif s.bakHead ~= nil then
 		if hd then hd.Transparency = s.bakHead; pcall(function() hd.LocalTransparencyModifier = 0 end) end
 		s.bakHead = nil
@@ -7691,7 +7802,7 @@ function F.shLepasEfek(pulih)
 	for _, sisi in ipairs({"Right", "Left"}) do F.shKorBersih(sisi, pulih) end
 	for _, it in ipairs(s.acc) do F.lepasObj(it) end
 	if s.headConn then s.headConn:Disconnect(); s.headConn = nil end
-	pcall(function() RS:UnbindFromRenderStep("KronozShHead") end)
+	pcall(function() RS:UnbindFromRenderStep("OctagrubShHead") end)
 	if pulih then
 		local m = s.model
 		if m and m.Parent and s.bakHead ~= nil then
@@ -7870,7 +7981,7 @@ function F.shRigBangun(tipe)
 		return Players:CreateHumanoidModelFromDescription(desc, enumTipe)
 	end)
 	if not okM or not ref then return false, "gagal buat model " .. tipe .. ": " .. tostring(ref) end
-	ref.Name = "KronozRig_" .. tostring(s.target.Name)
+	ref.Name = "OctagrubRig_" .. tostring(s.target.Name)
 	for _, d in ipairs(ref:GetDescendants()) do
 		if d:IsA("Script") or d:IsA("LocalScript") then pcall(function() d:Destroy() end) end
 		if d:IsA("BasePart") then
@@ -7886,8 +7997,8 @@ function F.shRigBangun(tipe)
 			hum.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
 		end)
 	end
-	local folder = workspace:FindFirstChild("KronozRig")
-	if not folder then folder = Instance.new("Folder"); folder.Name = "KronozRig"; folder.Parent = workspace end
+	local folder = workspace:FindFirstChild("OctagrubRig")
+	if not folder then folder = Instance.new("Folder"); folder.Name = "OctagrubRig"; folder.Parent = workspace end
 	ref.Parent = folder
 	s.overlay = ref
 	F.rigExtra[ref] = true
@@ -8240,7 +8351,7 @@ function F.pgShare(page)
 				rnd(k, 12); mk("UIStroke", {Color = BRD, Thickness = 1}, k)
 				local gambar = mk("ImageLabel", {Size = UDim2.new(1, -16, 0, 80), Position = UDim2.new(0, 8, 0, 8), BackgroundColor3 = BG, BorderSizePixel = 0, Image = "rbxthumb://type=Asset&id=" .. tostring(d.id) .. "&w=150&h=150", ScaleType = Enum.ScaleType.Fit}, k)
 				rnd(gambar, 10)
-				local bf = mk("TextButton", {Size = UDim2.new(0, 28, 0, 18), Position = UDim2.new(0, 12, 0, 12), BackgroundColor3 = d.fav and Color3.fromRGB(75, 12, 17) or BTN, Text = "FAV", TextColor3 = d.fav and OR or MUT, Font = FB, TextSize = 9, AutoButtonColor = false, ZIndex = 3}, k)
+				local bf = mk("TextButton", {Size = UDim2.new(0, 28, 0, 18), Position = UDim2.new(0, 12, 0, 12), BackgroundColor3 = d.fav and Color3.fromRGB(0, 88, 106) or BTN, Text = "FAV", TextColor3 = d.fav and OR or MUT, Font = FB, TextSize = 9, AutoButtonColor = false, ZIndex = 3}, k)
 				rnd(bf, 6)
 				mk("TextLabel", {Size = UDim2.new(1, -10, 0, 30), Position = UDim2.new(0, 5, 0, 92), BackgroundTransparency = 1, Text = d.nama, TextColor3 = TXT, Font = FM, TextSize = 10, TextWrapped = true, TextYAlignment = Enum.TextYAlignment.Top, TextXAlignment = Enum.TextXAlignment.Center}, k)
 				local bPasang = mk("TextButton", {Size = UDim2.new(1, -16, 0, 26), Position = UDim2.new(0, 8, 0, 126), BackgroundColor3 = pasang and BTN or ACT, Text = pasang and "Lepas" or "Pasang", TextColor3 = TXT, Font = FB, TextSize = 12, AutoButtonColor = false}, k)
@@ -8248,7 +8359,7 @@ function F.pgShare(page)
 				local sel = (s.pilih == d.id)
 				local bPilih = mk("TextButton", {Size = UDim2.new(0.5, -11, 0, 24), Position = UDim2.new(0, 8, 0, 156), BackgroundColor3 = sel and ACT or BTN, Text = "Pilih", TextColor3 = TXT, Font = FB, TextSize = 11, AutoButtonColor = false}, k)
 				rnd(bPilih, 8)
-				local bHapus = mk("TextButton", {Size = UDim2.new(0.5, -11, 0, 24), Position = UDim2.new(0.5, 3, 0, 156), BackgroundColor3 = Color3.fromRGB(75, 12, 17), Text = "Hapus", TextColor3 = TXT, Font = FB, TextSize = 11, AutoButtonColor = false}, k)
+				local bHapus = mk("TextButton", {Size = UDim2.new(0.5, -11, 0, 24), Position = UDim2.new(0.5, 3, 0, 156), BackgroundColor3 = Color3.fromRGB(0, 88, 106), Text = "Hapus", TextColor3 = TXT, Font = FB, TextSize = 11, AutoButtonColor = false}, k)
 				rnd(bHapus, 8)
 				bf.MouseButton1Click:Connect(function()
 					task.spawn(F.aman, function() d.fav = not d.fav; F.shSimpan(); gridRender() end)
@@ -10864,7 +10975,7 @@ local function pgSaran(page)
 			local fieldsEmbed = {{name = "Pemain", value = me.Name, inline = true}}
 			if pilih == "Lapor bug" then table.insert(fieldsEmbed, {name = "Map", value = mapTeks, inline = true}) end
 			local warna = ({["Kritik"] = 16753920, ["Req fitur"] = 3447003, ["Lapor bug"] = 15158332})[pilih] or 0
-			local isi = game:GetService("HttpService"):JSONEncode({username = "KRONOZ LARPER", embeds = {{title = pilih, description = teks, color = warna, fields = fieldsEmbed, footer = {text = "KRONOZ LARPER v9 PREMIUM"}}}})
+			local isi = game:GetService("HttpService"):JSONEncode({username = "OCTAGRUB LARPER", embeds = {{title = pilih, description = teks, color = warna, fields = fieldsEmbed, footer = {text = "OCTAGRUB LARPER v9 PREMIUM"}}}})
 			local ok, res = pcall(httpReq, {Url = C.WEBHOOK_SARAN, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = isi})
 			if ok and res and (res.StatusCode == 204 or res.StatusCode == 200) then
 				kotak.Text = ""; if kotakMap then kotakMap.Text = "" end; F.catat("saran: terkirim (" .. pilih .. ")")
@@ -10885,9 +10996,10 @@ local function bangunKunci()
 	local TS2 = game:GetService("TweenService")
 	local vp = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(640, 360)
 	local pg = me:WaitForChild("PlayerGui")
-	local lama = pg:FindFirstChild("KronozGate"); if lama then lama:Destroy() end
-	local gate = mk("ScreenGui", {Name = "KronozGate", ResetOnSpawn = false, DisplayOrder = 1000, IgnoreGuiInset = true}, pg)
-	local redup = mk("Frame", {Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.45, BorderSizePixel = 0}, gate)
+	local lama = pg:FindFirstChild("OctagrubGate"); if lama then lama:Destroy() end
+	local gate = mk("ScreenGui", {Name = "OctagrubGate", ResetOnSpawn = false, DisplayOrder = 1000, IgnoreGuiInset = true}, pg)
+	local redup = mk("Frame", {Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Color3.fromRGB(2, 14, 26), BackgroundTransparency = 0.3, BorderSizePixel = 0}, gate)
+	F.gelembung(redup, 14, 2)
 	local kotak = mk("Frame", {AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Size = UDim2.new(0, math.clamp(vp.X - 40, 260, 340), 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = BG, BorderSizePixel = 0}, redup)
 	rnd(kotak, 18)
 	mk("UIStroke", {Color = BRD, Thickness = 1, Transparency = 0.2}, kotak)
@@ -10896,9 +11008,9 @@ local function bangunKunci()
 	mk("TextLabel", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Text = "Halo user, kami akan memberitahu, mungkin di steal an egg(sae) akan ada bug jika kamu menggunakan fitur clone, template larp, jadi kalo ada bug jangan marah marah karna itu memang di sengaja karna mekanisme nya", TextColor3 = TXT, Font = FM, TextSize = 13, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, LayoutOrder = 1}, kotak)
 	local baris = mk("Frame", {Size = UDim2.new(1, 0, 0, 42), BackgroundTransparency = 1, LayoutOrder = 2}, kotak)
 	mk("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder}, baris)
-	local hijau = mk("TextButton", {Size = UDim2.new(0.5, -5, 1, 0), BackgroundColor3 = Color3.fromRGB(46, 170, 90), Text = "Mengerti", TextColor3 = Color3.new(1, 1, 1), Font = FB, TextSize = 14, AutoButtonColor = false, LayoutOrder = 1}, baris)
+	local hijau = mk("TextButton", {Size = UDim2.new(0.5, -5, 1, 0), BackgroundColor3 = Color3.fromRGB(0, 160, 150), Text = "Mengerti", TextColor3 = Color3.new(1, 1, 1), Font = FB, TextSize = 14, AutoButtonColor = false, LayoutOrder = 1}, baris)
 	rnd(hijau, 12)
-	local merah = mk("TextButton", {Size = UDim2.new(0.5, -5, 1, 0), BackgroundColor3 = Color3.fromRGB(210, 55, 55), Text = "Keluar", TextColor3 = Color3.new(1, 1, 1), Font = FB, TextSize = 14, AutoButtonColor = false, LayoutOrder = 2}, baris)
+	local merah = mk("TextButton", {Size = UDim2.new(0.5, -5, 1, 0), BackgroundColor3 = Color3.fromRGB(176, 62, 82), Text = "Keluar", TextColor3 = Color3.new(1, 1, 1), Font = FB, TextSize = 14, AutoButtonColor = false, LayoutOrder = 2}, baris)
 	rnd(merah, 12)
 	local pilihan = nil
 	hijau.MouseButton1Click:Connect(function() pilihan = true end)
@@ -10964,12 +11076,12 @@ function F.pgProfil(page)
 	local n = 0
 	local function nx() n = n + 1; return n end
 	-- banner (gaya Overview referensi)
-	local banner = mk("Frame", {Size = UDim2.new(1, 0, 0, 96), BackgroundColor3 = Color3.fromRGB(125, 12, 25), BorderSizePixel = 0, LayoutOrder = nx()}, page)
+	local banner = mk("Frame", {Size = UDim2.new(1, 0, 0, 96), BackgroundColor3 = Color3.fromRGB(0, 100, 130), BorderSizePixel = 0, LayoutOrder = nx()}, page)
 	rnd(banner, 14)
-	mk("UIGradient", {Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(35, 8, 12)), ColorSequenceKeypoint.new(0.45, Color3.fromRGB(125, 12, 25)), ColorSequenceKeypoint.new(1, Color3.fromRGB(235, 55, 70))}), Rotation = 0}, banner)
-	mk("TextLabel", {Size = UDim2.new(0.7, 0, 0, 30), Position = UDim2.new(0, 16, 0, 18), BackgroundTransparency = 1, Text = "Welcome to KRONOZ", TextColor3 = TXT, Font = Enum.Font.GothamBlack, TextSize = 20, TextXAlignment = Enum.TextXAlignment.Left}, banner)
-	mk("TextLabel", {Size = UDim2.new(0.7, 0, 0, 16), Position = UDim2.new(0, 16, 0, 54), BackgroundTransparency = 1, Text = "YOUR WORKSPACE. YOUR CONTROL.", TextColor3 = Color3.fromRGB(230, 190, 195), TextSize = 9, Font = FB, TextXAlignment = Enum.TextXAlignment.Left}, banner)
-	mk("TextLabel", {Size = UDim2.new(0, 110, 0, 52), Position = UDim2.new(1, -124, 0, 22), BackgroundTransparency = 1, Text = "KZ", TextColor3 = TXT, Font = Enum.Font.GothamBlack, TextSize = 44, TextXAlignment = Enum.TextXAlignment.Right}, banner)
+	mk("UIGradient", {Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(3, 30, 60)), ColorSequenceKeypoint.new(0.45, Color3.fromRGB(0, 110, 142)), ColorSequenceKeypoint.new(1, Color3.fromRGB(40, 222, 206))}), Rotation = 0}, banner)
+	mk("TextLabel", {Size = UDim2.new(0.7, 0, 0, 30), Position = UDim2.new(0, 16, 0, 18), BackgroundTransparency = 1, Text = "Welcome to OCTAGRUB", TextColor3 = TXT, Font = Enum.Font.GothamBlack, TextSize = 20, TextXAlignment = Enum.TextXAlignment.Left}, banner)
+	mk("TextLabel", {Size = UDim2.new(0.7, 0, 0, 16), Position = UDim2.new(0, 16, 0, 54), BackgroundTransparency = 1, Text = "DIVE DEEP. LARP HARD.", TextColor3 = Color3.fromRGB(190, 238, 242), TextSize = 9, Font = FB, TextXAlignment = Enum.TextXAlignment.Left}, banner)
+	mk("TextLabel", {Size = UDim2.new(0, 110, 0, 52), Position = UDim2.new(1, -124, 0, 22), BackgroundTransparency = 1, Text = "OG", TextColor3 = TXT, Font = Enum.Font.GothamBlack, TextSize = 44, TextXAlignment = Enum.TextXAlignment.Right}, banner)
 
 	-- kartu profil
 	local kartu = mk("Frame", {Size = UDim2.new(1, 0, 0, 84), BackgroundColor3 = ROW, BorderSizePixel = 0, LayoutOrder = nx()}, page)
@@ -10991,7 +11103,7 @@ function F.pgProfil(page)
         local lblUserProfil = mk("TextLabel", {Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 1, Text = "@" .. tostring(me.Name), TextColor3 = MUT, Font = FM, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, LayoutOrder = 1}, barisUser)
         mk("UISizeConstraint", {MaxSize = Vector2.new(170, 16)}, lblUserProfil)
         local badgeFakeP = F.centangBadge(barisUser)
-        badgeFakeP.Name = "KronozBadgeFake"
+        badgeFakeP.Name = "OctagrubBadgeFake"
         badgeFakeP.Size = UDim2.new(0, 9, 0, 9)
         badgeFakeP.LayoutOrder = 2
         local function segarBadge()
@@ -11020,7 +11132,7 @@ function F.pgProfil(page)
 		return lblNilai, lblSub
 	end
 	kartuStat(1, "STATUS APLIKASI", "OK", "Siap", "Berjalan normal", true)
-	kartuStat(2, "VERSI", "v", "version 1.6", "Versi aplikasi", false)
+	kartuStat(2, "VERSI", "v", "version 1.0", "Versi aplikasi", false)
 	local nilaiSis, subSis = kartuStat(3, "STATUS SISTEM", "~~", "- FPS", "Ping -", true)
 	-- FPS dihitung tiap detik dari Heartbeat, ping dari Stats (kalau terbaca)
 	local guiProfil = S.ui.gui
@@ -11055,7 +11167,7 @@ function F.pgProfil(page)
 	baris("Username", "@" .. tostring(me.Name))
 	baris("User ID", tostring(me.UserId))
 	baris("Umur akun", umur)
-	baris("Script", "KRONOZ version 1.6")
+	baris("Script", "OCTAGRUB version 1.0")
 
 	-- aksi cepat: pindah ke tab lain
 	local aksi = mk("Frame", {Size = UDim2.new(1, 0, 0, 104), BackgroundColor3 = ROW, BorderSizePixel = 0, LayoutOrder = nx()}, page)
@@ -11085,8 +11197,8 @@ F.langitPusat = nil
 F.AWAN_JUMLAH = 160
 F.AWAN_RADIUS = 800
 function F.awanBuat(pusat)
-	local folder = workspace:FindFirstChild("KRONOZ_Awan")
-	if not folder then folder = Instance.new("Folder"); folder.Name = "KRONOZ_Awan"; folder.Parent = workspace end
+	local folder = workspace:FindFirstChild("OCTAGRUB_Awan")
+	if not folder then folder = Instance.new("Folder"); folder.Name = "OCTAGRUB_Awan"; folder.Parent = workspace end
 	folder:ClearAllChildren()
 	local r = F.AWAN_RADIUS
 	for i = 1, F.AWAN_JUMLAH do
@@ -11114,8 +11226,8 @@ function F.langitSet(on)
 	local gen = F.langitGen
 	local Lt = game:GetService("Lighting")
 	local okT, awan = pcall(function() return workspace.Terrain.Clouds end)
-	local lamaAwan = workspace:FindFirstChild("KRONOZ_Awan"); if lamaAwan then lamaAwan:Destroy() end
-	local lamaAtm = Lt:FindFirstChild("KRONOZ_Langit"); if lamaAtm then lamaAtm:Destroy() end
+	local lamaAwan = workspace:FindFirstChild("OCTAGRUB_Awan"); if lamaAwan then lamaAwan:Destroy() end
+	local lamaAtm = Lt:FindFirstChild("OCTAGRUB_Langit"); if lamaAtm then lamaAtm:Destroy() end
 	F.langitPusat = nil
 	if not S.langitOn then
 		if F.langitAsli then
@@ -11134,14 +11246,14 @@ function F.langitSet(on)
 	-- sky & awan terrain asli dibuang; dicek terus supaya tidak balik lagi (mis. setelah respawn)
 	local function bersih()
 		for _, o in ipairs(Lt:GetChildren()) do
-			if (o:IsA("Sky") or o:IsA("Atmosphere")) and o.Name ~= "KRONOZ_Langit" then
+			if (o:IsA("Sky") or o:IsA("Atmosphere")) and o.Name ~= "OCTAGRUB_Langit" then
 				table.insert(F.langitAsli.buang, o); pcall(function() o.Parent = nil end)
 			end
 		end
 		if okT and awan then pcall(function() awan.Enabled = false end) end
 	end
 	-- atmosfer biru khas Minecraft
-	local atm = Instance.new("Atmosphere"); atm.Name = "KRONOZ_Langit"
+	local atm = Instance.new("Atmosphere"); atm.Name = "OCTAGRUB_Langit"
 	atm.Color = Color3.fromRGB(124, 176, 255); atm.Decay = Color3.fromRGB(124, 176, 255)
 	atm.Density = 0.3; atm.Offset = 0; atm.Glare = 0; atm.Haze = 0
 	atm.Parent = Lt
@@ -11270,7 +11382,7 @@ function F.fpsSkip(o)
 	local a = o.Parent
 	local n = 0
 	while a and a ~= workspace and n < 12 do
-		if a.Name == "KRONOZ_Awan" then return true end
+		if a.Name == "OCTAGRUB_Awan" then return true end
 		if a:IsA("Model") and a:FindFirstChildOfClass("Humanoid") then return true end
 		a = a.Parent; n = n + 1
 	end
@@ -11365,7 +11477,7 @@ function F.fpsSet(on)
 end
 
 local function pgPengaturan(set)
-	local NAVX, NAVON = Color3.fromRGB(12, 12, 14), Color3.fromRGB(75, 12, 17)
+	local NAVX, NAVON = Color3.fromRGB(6, 28, 46), Color3.fromRGB(0, 88, 106)
 	local urutan = 0
 	local function nx() urutan = urutan + 1; return urutan end
 	local kiri = mk("Frame", {Size = UDim2.new(0.34, -6, 1, -6), Position = UDim2.new(0, 6, 0, 0), BackgroundColor3 = ROW, BorderSizePixel = 0}, set)
@@ -11489,7 +11601,7 @@ local function pgPengaturan(set)
 		local function segarFps() bFps.Text = "FPS BOOST: " .. (S.fpsOn == true and "ON" or "OFF") end
 		bFps.MouseButton1Click:Connect(function() task.spawn(F.aman, function() F.fpsSet(S.fpsOn ~= true); F.autoSimpan(); segarFps() end) end)
 		F.daftarSegar(segarFps); segarFps()
-		local infoM = mk("TextLabel", {Size = UDim2.new(1, 0, 0, 62), BackgroundColor3 = ROW, BorderSizePixel = 0, Text = "Item avatar di menu bawaan Roblox: saat kamu membuka menu avatarmu sendiri, daftar item dan harganya diganti dengan item yang kamu pasang di kronoz.", TextColor3 = MUT, Font = FM, TextSize = 10, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, LayoutOrder = nx()}, pPerf)
+		local infoM = mk("TextLabel", {Size = UDim2.new(1, 0, 0, 62), BackgroundColor3 = ROW, BorderSizePixel = 0, Text = "Item avatar di menu bawaan Roblox: saat kamu membuka menu avatarmu sendiri, daftar item dan harganya diganti dengan item yang kamu pasang di octagrub.", TextColor3 = MUT, Font = FM, TextSize = 10, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, LayoutOrder = nx()}, pPerf)
 		rnd(infoM, 10); mk("UIPadding", {PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10)}, infoM)
 		local bMenu = mk("TextButton", {Size = UDim2.new(1, 0, 0, 30), BackgroundColor3 = BTN, Text = "", TextColor3 = TXT, Font = FB, TextSize = 11, AutoButtonColor = false, LayoutOrder = nx()}, pPerf); rnd(bMenu, 10)
 		local function segarMenu() bMenu.Text = "ITEM DI MENU ROBLOX: " .. (S.inspectOn ~= false and "ON" or "OFF") end
@@ -11573,9 +11685,9 @@ local function bangunUtama()
 	}
 	local ISI = {PROFIL = F.pgProfil, HAIR = pgShirt, ANIM = pgAnim, CLONE = pgFaker, FAKEP = F.pgFakeMaint, SHARE = F.pgShare, EVADE = F.pgEvade, LARP = pgLarp, BODY = pgBody, SHADER = F.pgShader}
 	local pg = me:WaitForChild("PlayerGui")
-	local lama = pg:FindFirstChild("KRONOZ"); if lama then lama:Destroy() end
-	local gui = mk("ScreenGui", {Name = "KRONOZ", ResetOnSpawn = false, DisplayOrder = 999}, pg)
-	S.ui.gui = gui; pcall(function() gui:SetAttribute("KronozUI", true) end); S.ui.segar = {}; S.ui.pilihWadah = {}; S.ui.halamanList = {}; S.ui.pilihCari = ""
+	local lama = pg:FindFirstChild("OCTAGRUB"); if lama then lama:Destroy() end
+	local gui = mk("ScreenGui", {Name = "OCTAGRUB", ResetOnSpawn = false, DisplayOrder = 999}, pg)
+	S.ui.gui = gui; pcall(function() gui:SetAttribute("OctagrubUI", true) end); S.ui.segar = {}; S.ui.pilihWadah = {}; S.ui.halamanList = {}; S.ui.pilihCari = ""
 
 	local kam = workspace.CurrentCamera; local vp = kam and kam.ViewportSize or Vector2.new(640, 360)
 	S.ui.fit = math.clamp(math.min(0.92, (vp.X - 24) / 640, (vp.Y - 24) / 464), 0.5, 0.92)
@@ -11585,8 +11697,8 @@ local function bangunUtama()
 	local SIDE_W = math.clamp(math.floor(W * 0.255), 118, 168)
 	local PANEL_X = SIDE_X + SIDE_W + 10
 	local TOP = HEAD_H + GAP
-	local NAV = Color3.fromRGB(12, 12, 14)
-	local NAV_ON = Color3.fromRGB(75, 12, 17)
+	local NAV = Color3.fromRGB(6, 28, 46)
+	local NAV_ON = Color3.fromRGB(0, 88, 106)
 	local function gradasi(o, kps)
 		local daftar = {}
 		for _, k in ipairs(kps) do table.insert(daftar, ColorSequenceKeypoint.new(k[1], k[2])) end
@@ -11598,23 +11710,24 @@ local function bangunUtama()
 	rnd(root, 19)
 	mk("UIStroke", {Color = OR, Thickness = 1.5, Transparency = 0}, root)
 	S.ui.skalaUI = mk("UIScale", {Scale = F.skalaTujuan(0.92)}, root)
+	F.airLaut(root, HEAD_H)
 
-	-- header: latar gradien, brand KZ / KRONOZ, status, tombol close (tanpa minimize)
+	-- header: latar gradien, brand OG / OCTAGRUB, tombol minimize, pengaturan, close
 	local hbg = mk("Frame", {Size = UDim2.new(1, 0, 0, HEAD_H), BackgroundColor3 = BG, BorderSizePixel = 0}, root)
 	rnd(hbg, 19)
-	gradasi(hbg, {{0, Color3.fromRGB(35, 8, 12)}, {0.55, Color3.fromRGB(15, 10, 11)}, {1, Color3.fromRGB(8, 8, 9)}})
+	gradasi(hbg, {{0, Color3.fromRGB(0, 78, 104)}, {0.55, Color3.fromRGB(5, 38, 62)}, {1, Color3.fromRGB(3, 20, 36)}})
 	local head = mk("Frame", {Size = UDim2.new(1, 0, 0, HEAD_H), BackgroundTransparency = 1}, root)
 	local brand = mk("Frame", {Size = UDim2.new(0, 240, 0, 52), Position = UDim2.new(0, 14, 0, 4), BackgroundTransparency = 1}, head)
-	local kzLogo = mk("TextLabel", {Size = UDim2.new(0, 78, 0, 46), Position = UDim2.new(0, 0, 0, 2), BackgroundTransparency = 1, Text = "KZ", TextColor3 = TXT, Font = Enum.Font.GothamBlack, TextSize = 40, TextXAlignment = Enum.TextXAlignment.Left}, brand)
-	gradasi(kzLogo, {{0, Color3.fromRGB(220, 20, 35)}, {0.5, Color3.fromRGB(245, 75, 85)}, {1, Color3.fromRGB(255, 255, 255)}})
-	local kronozLbl = mk("TextLabel", {Size = UDim2.new(0, 150, 0, 24), Position = UDim2.new(0, 80, 0, 7), BackgroundTransparency = 1, Text = "KRONOZ", TextColor3 = TXT, Font = Enum.Font.GothamBlack, TextSize = 18, TextXAlignment = Enum.TextXAlignment.Left}, brand)
-	gradasi(kronozLbl, {{0, Color3.fromRGB(225, 35, 48)}, {0.5, Color3.fromRGB(255, 120, 125)}, {1, Color3.fromRGB(255, 255, 255)}})
-	mk("TextLabel", {Size = UDim2.new(0, 150, 0, 14), Position = UDim2.new(0, 82, 0, 32), BackgroundTransparency = 1, Text = "LETSGO LARPING", TextColor3 = MUT, Font = FB, TextSize = 8, TextXAlignment = Enum.TextXAlignment.Left}, brand)
+	local kzLogo = mk("TextLabel", {Size = UDim2.new(0, 78, 0, 46), Position = UDim2.new(0, 0, 0, 2), BackgroundTransparency = 1, Text = "OG", TextColor3 = TXT, Font = Enum.Font.GothamBlack, TextSize = 40, TextXAlignment = Enum.TextXAlignment.Left}, brand)
+	gradasi(kzLogo, {{0, Color3.fromRGB(0, 206, 196)}, {0.5, Color3.fromRGB(110, 236, 230)}, {1, Color3.fromRGB(255, 255, 255)}})
+	local octagrubLbl = mk("TextLabel", {Size = UDim2.new(0, 150, 0, 24), Position = UDim2.new(0, 80, 0, 7), BackgroundTransparency = 1, Text = "OCTAGRUB", TextColor3 = TXT, Font = Enum.Font.GothamBlack, TextSize = 18, TextXAlignment = Enum.TextXAlignment.Left}, brand)
+	gradasi(octagrubLbl, {{0, Color3.fromRGB(0, 206, 196)}, {0.5, Color3.fromRGB(120, 238, 232)}, {1, Color3.fromRGB(255, 255, 255)}})
+	mk("TextLabel", {Size = UDim2.new(0, 150, 0, 14), Position = UDim2.new(0, 82, 0, 32), BackgroundTransparency = 1, Text = "DIVE INTO THE LARP", TextColor3 = MUT, Font = FB, TextSize = 8, TextXAlignment = Enum.TextXAlignment.Left}, brand)
 	local W_JOIN = W >= 600 and 150 or 112
 	if W >= 520 then
 		local bJoin = mk("TextButton", {Size = UDim2.new(0, W_JOIN, 0, 34), Position = UDim2.new(1, -(122 + W_JOIN), 0, 13), BackgroundColor3 = BTN, Text = "JOIN SALURAN WA", TextColor3 = TXT, Font = FB, TextSize = W >= 600 and 12 or 10, AutoButtonColor = false}, head)
 		rnd(bJoin, 9); mk("UIStroke", {Color = OR, Thickness = 1}, bJoin)
-		bJoin.MouseButton1Click:Connect(function() task.spawn(F.aman, function() if setclipboard then setclipboard(C.WA_SALURAN) end; F.notif("KRONOZ", "link saluran disalin, buka WhatsApp dan tempel", 4) end) end)
+		bJoin.MouseButton1Click:Connect(function() task.spawn(F.aman, function() if setclipboard then setclipboard(C.WA_SALURAN) end; F.notif("OCTAGRUB", "link saluran disalin, buka WhatsApp dan tempel", 4) end) end)
 	end
 	local bMin = mk("TextButton", {Size = UDim2.new(0, 30, 0, 34), Position = UDim2.new(1, -78, 0, 13), BackgroundColor3 = BTN, Text = "", AutoButtonColor = false}, head)
 	rnd(bMin, 9); mk("UIStroke", {Color = BRD, Thickness = 1}, bMin)
@@ -11635,16 +11748,17 @@ local function bangunUtama()
 
 	-- bubble saat di-minimize (klik atau geser untuk kembali)
 	local TI = TweenInfo.new(0.22, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-	local mini = mk("ImageButton", {Size = UDim2.new(0, 42, 0, 42), Position = UDim2.new(0, 10, 0, 40), BackgroundColor3 = BG, Image = "rbxassetid://128967992287891", ScaleType = Enum.ScaleType.Fit, AutoButtonColor = false, Visible = false}, gui)
-	rnd(mini, 12); mk("UIStroke", {Color = OR, Thickness = 1}, mini)
+	local mini = mk("ImageButton", {Size = UDim2.new(0, 48, 0, 48), Position = UDim2.new(0, 10, 0, 40), BackgroundColor3 = BG, Image = "", ScaleType = Enum.ScaleType.Fit, AutoButtonColor = false, Visible = false}, gui)
+	rnd(mini, 24); mk("UIStroke", {Color = OR, Thickness = 1}, mini)
+	F.gelembungMini(mini)
 	S.ui.mini = mini
 	local function minimkan()
 		mini.Position = root.Position
-		TS:Create(root, TweenInfo.new(0.18, Enum.EasingStyle.Quad), {GroupTransparency = 1}):Play()
-		TS:Create(S.ui.skalaUI, TweenInfo.new(0.18, Enum.EasingStyle.Quad), {Scale = F.skalaTujuan(0.92)}):Play()
-		task.delay(0.19, function()
+		TS:Create(root, TweenInfo.new(0.24, Enum.EasingStyle.Quad), {GroupTransparency = 1}):Play()
+		TS:Create(S.ui.skalaUI, TweenInfo.new(0.24, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Scale = 0.12}):Play()
+		task.delay(0.25, function()
 			root.Visible = false
-			mini.Visible = true
+			F.gelembungMuncul(mini)
 		end)
 	end
 	local function pulihkan()
@@ -11661,7 +11775,7 @@ local function bangunUtama()
 
 	-- sidebar: kartu gelap, pencarian, daftar tab berkode, footer
 	local side = mk("Frame", {Position = UDim2.new(0, SIDE_X, 0, TOP), Size = UDim2.new(0, SIDE_W, 0, H - TOP - 10), BackgroundColor3 = NAV, BorderSizePixel = 0}, root)
-	rnd(side, 15); mk("UIStroke", {Color = Color3.fromRGB(110, 20, 26), Thickness = 1}, side)
+	rnd(side, 15); mk("UIStroke", {Color = Color3.fromRGB(22, 92, 122), Thickness = 1}, side)
 	local boxCari = mk("TextBox", {Size = UDim2.new(1, -20, 0, 28), Position = UDim2.new(0, 10, 0, 8), BackgroundColor3 = BTN, BorderSizePixel = 0, Text = "", PlaceholderText = "Cari...", PlaceholderColor3 = MUT, TextColor3 = TXT, Font = FM, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, ClearTextOnFocus = false}, side)
 	rnd(boxCari, 10); mk("UIStroke", {Color = BRD, Thickness = 1}, boxCari); mk("UIPadding", {PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 8)}, boxCari)
 	boxCari:GetPropertyChangedSignal("Text"):Connect(function()
@@ -11677,7 +11791,7 @@ local function bangunUtama()
 	local navBtn = {}
 	for i, t in ipairs(TABS) do
 		local b = mk("TextButton", {Size = UDim2.new(1, 0, 0, 25), BackgroundColor3 = NAV, Text = "", AutoButtonColor = false, LayoutOrder = i}, navBox)
-		rnd(b, 8); mk("UIStroke", {Color = Color3.fromRGB(110, 20, 26), Thickness = 1}, b)
+		rnd(b, 8); mk("UIStroke", {Color = Color3.fromRGB(22, 92, 122), Thickness = 1}, b)
 		mk("TextLabel", {Size = UDim2.new(0, 26, 1, 0), Position = UDim2.new(0, 10, 0, 0), BackgroundTransparency = 1, Text = t.ab, TextColor3 = OR, Font = FB, TextSize = 11}, b)
 		local namaLbl = mk("TextLabel", {Size = UDim2.new(1, -46, 1, 0), Position = UDim2.new(0, 40, 0, 0), BackgroundTransparency = 1, Text = t.judul, TextColor3 = MUT, Font = FM, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd}, b)
 		local kunci = t.key
@@ -11691,13 +11805,13 @@ local function bangunUtama()
 	local foot = mk("Frame", {Position = UDim2.new(0, 10, 1, -(FOOT_H + 10)), Size = UDim2.new(1, -20, 0, FOOT_H), BackgroundColor3 = ROW, BorderSizePixel = 0}, side)
 	rnd(foot, 12); mk("UIStroke", {Color = BRD, Thickness = 1}, foot)
 	mk("TextLabel", {Size = UDim2.new(0, 34, 0, 30), Position = UDim2.new(0, 8, 0, 14), BackgroundTransparency = 1, Text = "</>", TextColor3 = OR, Font = FB, TextSize = 15}, foot)
-	mk("TextLabel", {Size = UDim2.new(1, -56, 0, 18), Position = UDim2.new(0, 46, 0, 10), BackgroundTransparency = 1, Text = "KZ KRONOZ", TextColor3 = TXT, Font = FB, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd}, foot)
+	mk("TextLabel", {Size = UDim2.new(1, -56, 0, 18), Position = UDim2.new(0, 46, 0, 10), BackgroundTransparency = 1, Text = "OG OCTAGRUB", TextColor3 = TXT, Font = FB, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd}, foot)
 	mk("TextLabel", {Size = UDim2.new(1, -56, 0, 16), Position = UDim2.new(0, 46, 0, 28), BackgroundTransparency = 1, Text = "LARP Hub", TextColor3 = MUT, Font = FM, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd}, foot)
-	mk("TextLabel", {Size = UDim2.new(1, -56, 0, 14), Position = UDim2.new(0, 46, 0, 46), BackgroundTransparency = 1, Text = "version 1.6", TextColor3 = OR, Font = FB, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd}, foot)
+	mk("TextLabel", {Size = UDim2.new(1, -56, 0, 14), Position = UDim2.new(0, 46, 0, 46), BackgroundTransparency = 1, Text = "version 1.0", TextColor3 = OR, Font = FB, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd}, foot)
 
 	-- panel konten: breadcrumb, isi tab, dan status di bawah
 	local panel = mk("Frame", {Position = UDim2.new(0, PANEL_X, 0, TOP), Size = UDim2.new(0, W - PANEL_X - 10, 0, H - TOP - 10), BackgroundColor3 = BG, BorderSizePixel = 0, ClipsDescendants = true}, root)
-	rnd(panel, 16); mk("UIStroke", {Color = Color3.fromRGB(110, 20, 26), Thickness = 1}, panel)
+	rnd(panel, 16); mk("UIStroke", {Color = Color3.fromRGB(22, 92, 122), Thickness = 1}, panel)
 	local crumb = mk("TextLabel", {Size = UDim2.new(1, -28, 0, 26), Position = UDim2.new(0, 14, 0, 8), BackgroundTransparency = 1, RichText = true, Text = "", TextColor3 = TXT, Font = FM, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd}, panel)
 	local holder = mk("Frame", {Position = UDim2.new(0, 0, 0, 40), Size = UDim2.new(1, 0, 1, -64), BackgroundTransparency = 1, ClipsDescendants = true}, panel)
 	S.ui.statusBox = mk("TextLabel", {Size = UDim2.new(1, -28, 0, 18), Position = UDim2.new(0, 14, 1, -22), BackgroundTransparency = 1, Text = "siap", TextColor3 = MUT, Font = FM, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd}, panel)
@@ -11781,7 +11895,7 @@ local function bangunUtama()
 		infoNama.Text = it.nama .. (it.on and "   · nyala" or "   · belum nyala")
 		bAktif.Text = it.on and "MATIKAN" or "AKTIFKAN"
 		bAktif.BackgroundColor3 = it.on and BTN or ACT
-		bFav.Visible = true; bFav.TextColor3 = F.isFav(it) and OR or MUT; bFav.BackgroundColor3 = F.isFav(it) and Color3.fromRGB(75, 12, 17) or BTN
+		bFav.Visible = true; bFav.TextColor3 = F.isFav(it) and OR or MUT; bFav.BackgroundColor3 = F.isFav(it) and Color3.fromRGB(0, 88, 106) or BTN
 	end
 	table.insert(S.ui.segar, infoSegar)
 	local chips = mk("ScrollingFrame", {Size = UDim2.new(1, 0, 0, 28), Position = UDim2.new(0, 0, 0, CARD_BIG + 8), BackgroundColor3 = BG, BackgroundTransparency = 0, ZIndex = 4, BorderSizePixel = 0, ScrollBarThickness = 0, ScrollingDirection = Enum.ScrollingDirection.X, CanvasSize = UDim2.new(0, 0, 0, 0), AutomaticCanvasSize = Enum.AutomaticSize.X}, kanan)
@@ -11818,7 +11932,7 @@ local function bangunUtama()
 		else
 			local bWA = mk("TextButton", {Size = UDim2.new(1, 0, 0, 30), BackgroundColor3 = BTN, Text = "JOIN SALURAN WA", TextColor3 = TXT, Font = FB, TextSize = 11, AutoButtonColor = false, LayoutOrder = 0}, p)
 			rnd(bWA, 10)
-			bWA.MouseButton1Click:Connect(function() task.spawn(F.aman, function() if setclipboard then setclipboard(C.WA_SALURAN) end; F.notif("KRONOZ", "link saluran disalin, buka WhatsApp dan tempel", 4) end) end)
+			bWA.MouseButton1Click:Connect(function() task.spawn(F.aman, function() if setclipboard then setclipboard(C.WA_SALURAN) end; F.notif("OCTAGRUB", "link saluran disalin, buka WhatsApp dan tempel", 4) end) end)
 			for k, fn in ipairs({pgInfo, pgLog, pgSaran}) do
 				local w = mk("Frame", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = k}, p)
 				mk("UIListLayout", {Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder}, w)
@@ -11850,11 +11964,11 @@ local function bangunUtama()
 		end
 		for _, t in ipairs(TABS) do
 			if t.key == key then
-				crumb.Text = '<font color="#E63B35">' .. t.ab .. '</font>   ' .. (string.gsub(t.judul, "&", "&amp;")) .. '   <font color="#808080">' .. t.desk .. '</font>'
+				crumb.Text = '<font color="#19E3D2">' .. t.ab .. '</font>   ' .. (string.gsub(t.judul, "&", "&amp;")) .. '   <font color="#7FAFC4">' .. t.desk .. '</font>'
 			end
 		end
 		if key == "SETTING" then
-			crumb.Text = '<font color="#E63B35">ST</font>   Pengaturan   <font color="#808080">Ukuran UI, item, dan efek</font>'
+			crumb.Text = '<font color="#19E3D2">ST</font>   Pengaturan   <font color="#7FAFC4">Ukuran UI, item, dan efek</font>'
 		end
 		S.ui.aktifTab = key
 	end
@@ -11886,6 +12000,8 @@ local function bangunUtama()
 	if S.hideConn then S.hideConn:Disconnect() end
 	S.hideConn = UIS.InputBegan:Connect(function(i, gp) if not gp and i.KeyCode == S.hideKey then gui.Enabled = not gui.Enabled end end)
 
+	F.lautJendela(root)
+
 	-- muncul dengan pegas saat dibuka
 	local PEGAS = TweenInfo.new(0.42, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 	gui.Enabled = true; root.Visible = true
@@ -11903,7 +12019,7 @@ local function bangunUtama()
 	gui.DescendantAdded:Connect(function(d)
 		if d:IsA("TextButton") then task.defer(pasangEfek, d) end
 	end)
-	F.catat("siap. KRONOZ jalan")
+	F.catat("siap. OCTAGRUB jalan")
 end
 
 -- =====================================================================
@@ -12021,8 +12137,8 @@ function F.bangunKey()
 	local tersimpan = F.keyBaca()
 	local prefill, autoMasuk, pesanAwal = tersimpan, (tersimpan ~= nil), nil
 	local pg = me:WaitForChild("PlayerGui")
-	local lama = pg:FindFirstChild("KronozKey"); if lama then lama:Destroy() end
-	local gui = mk("ScreenGui", {Name = "KronozKey", ResetOnSpawn = false, DisplayOrder = 1001, IgnoreGuiInset = true}, pg)
+	local lama = pg:FindFirstChild("OctagrubKey"); if lama then lama:Destroy() end
+	local gui = mk("ScreenGui", {Name = "OctagrubKey", ResetOnSpawn = false, DisplayOrder = 1001, IgnoreGuiInset = true}, pg)
 	-- helper gradasi lokal
 	local function grad(o, kps, rot)
 		local seq = {}
@@ -12032,7 +12148,7 @@ function F.bangunKey()
 	local LIN = Enum.EasingStyle.Linear
 	-- latar: gradasi merah-hitam yang berputar pelan + partikel melayang
 	local redup = mk("Frame", {Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = TXT, BackgroundTransparency = 1, BorderSizePixel = 0}, gui)
-	local latarG = grad(redup, {{0, Color3.fromRGB(72, 8, 16)}, {0.5, Color3.fromRGB(6, 6, 8)}, {1, Color3.fromRGB(48, 6, 12)}}, 30)
+	local latarG = grad(redup, {{0, Color3.fromRGB(0, 64, 98)}, {0.5, Color3.fromRGB(3, 14, 28)}, {1, Color3.fromRGB(0, 46, 76)}}, 30)
 	TS:Create(redup, TweenInfo.new(0.35, Enum.EasingStyle.Quad), {BackgroundTransparency = 0.1}):Play()
 	TS:Create(latarG, TweenInfo.new(16, LIN, Enum.EasingDirection.Out, -1), {Rotation = 390}):Play()
 	local partikel = mk("Frame", {Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, BorderSizePixel = 0}, gui)
@@ -12047,12 +12163,13 @@ function F.bangunKey()
 			if p.Parent then TS:Create(p, TweenInfo.new(durasi, LIN, Enum.EasingDirection.Out, -1), {Position = UDim2.new(xAkhir, 0, -0.05, 0)}):Play() end
 		end)
 	end
+	F.sinarLaut(gui, 2); F.gelembung(gui, 22, 3)
 	-- kartu utama: gradasi gelap, garis tepi bercahaya yang berputar
 	local kotak = mk("Frame", {AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 26), Size = UDim2.new(0, 344, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = TXT, BorderSizePixel = 0}, gui)
 	rnd(kotak, 22)
-	grad(kotak, {{0, Color3.fromRGB(32, 11, 15)}, {1, Color3.fromRGB(9, 9, 11)}}, 90)
+	grad(kotak, {{0, Color3.fromRGB(8, 44, 70)}, {1, Color3.fromRGB(4, 16, 30)}}, 90)
 	local sKotak = mk("UIStroke", {Color = TXT, Thickness = 2}, kotak)
-	local gS = grad(sKotak, {{0, Color3.fromRGB(240, 50, 62)}, {0.5, Color3.fromRGB(46, 12, 18)}, {1, Color3.fromRGB(240, 50, 62)}}, 0)
+	local gS = grad(sKotak, {{0, Color3.fromRGB(30, 232, 216)}, {0.5, Color3.fromRGB(8, 40, 66)}, {1, Color3.fromRGB(30, 232, 216)}}, 0)
 	TS:Create(gS, TweenInfo.new(3.5, LIN, Enum.EasingDirection.Out, -1), {Rotation = 360}):Play()
 	local skala = mk("UIScale", {Scale = 0.88}, kotak)
 	TS:Create(skala, SPRING, {Scale = 1}):Play()
@@ -12064,21 +12181,21 @@ function F.bangunKey()
 	local titik = mk("Frame", {Size = UDim2.new(0, 7, 0, 7), Position = UDim2.new(0, 0, 0.5, -3), BackgroundColor3 = OR, BorderSizePixel = 0}, pill)
 	mk("UICorner", {CornerRadius = UDim.new(1, 0)}, titik)
 	TS:Create(titik, TweenInfo.new(0.9, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {BackgroundTransparency = 0.8}):Play()
-	mk("TextLabel", {Size = UDim2.new(0.6, 0, 1, 0), Position = UDim2.new(0, 14, 0, 0), BackgroundTransparency = 1, Text = "SECURE ACCESS", TextColor3 = OR, Font = FB, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left}, pill)
+	mk("TextLabel", {Size = UDim2.new(0.6, 0, 1, 0), Position = UDim2.new(0, 14, 0, 0), BackgroundTransparency = 1, Text = "DEEP ACCESS", TextColor3 = OR, Font = FB, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left}, pill)
 	mk("TextLabel", {Size = UDim2.new(0.4, 0, 1, 0), Position = UDim2.new(0.6, 0, 0, 0), BackgroundTransparency = 1, Text = "HWID LOCKED", TextColor3 = MUT, Font = FM, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Right}, pill)
 	-- kepala: logo bercahaya + judul bergradasi
 	local kepala = mk("Frame", {Size = UDim2.new(1, 0, 0, 54), BackgroundTransparency = 1, LayoutOrder = 1}, kotak)
 	local logo = mk("Frame", {Size = UDim2.new(0, 54, 0, 54), BackgroundColor3 = TXT, BorderSizePixel = 0}, kepala)
 	mk("UICorner", {CornerRadius = UDim.new(0, 16)}, logo)
-	grad(logo, {{0, Color3.fromRGB(246, 62, 74)}, {1, Color3.fromRGB(112, 12, 20)}}, 45)
-	local logoS = mk("UIStroke", {Color = Color3.fromRGB(255, 150, 156), Thickness = 1.6, Transparency = 0.15}, logo)
+	grad(logo, {{0, Color3.fromRGB(40, 226, 212)}, {1, Color3.fromRGB(0, 92, 132)}}, 45)
+	local logoS = mk("UIStroke", {Color = Color3.fromRGB(165, 246, 242), Thickness = 1.6, Transparency = 0.15}, logo)
 	TS:Create(logoS, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Transparency = 0.85}):Play()
-	mk("TextLabel", {Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "KZ", TextColor3 = TXT, Font = Enum.Font.GothamBlack, TextSize = 22}, logo)
-	local judulK = mk("TextLabel", {Size = UDim2.new(1, -66, 0, 30), Position = UDim2.new(0, 66, 0, 3), BackgroundTransparency = 1, Text = "KRONOZ", TextColor3 = TXT, Font = Enum.Font.GothamBlack, TextSize = 26, TextXAlignment = Enum.TextXAlignment.Left}, kepala)
-	grad(judulK, {{0, Color3.fromRGB(255, 92, 102)}, {1, TXT}}, 0)
-	mk("TextLabel", {Size = UDim2.new(1, -66, 0, 16), Position = UDim2.new(0, 66, 0, 34), BackgroundTransparency = 1, Text = "LARP Hub  |  Key System", TextColor3 = MUT, Font = FM, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left}, kepala)
+	mk("TextLabel", {Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "OG", TextColor3 = TXT, Font = Enum.Font.GothamBlack, TextSize = 22}, logo)
+	local judulK = mk("TextLabel", {Size = UDim2.new(1, -66, 0, 30), Position = UDim2.new(0, 66, 0, 3), BackgroundTransparency = 1, Text = "OCTAGRUB", TextColor3 = TXT, Font = Enum.Font.GothamBlack, TextSize = 26, TextXAlignment = Enum.TextXAlignment.Left}, kepala)
+	grad(judulK, {{0, Color3.fromRGB(110, 240, 235)}, {1, TXT}}, 0)
+	mk("TextLabel", {Size = UDim2.new(1, -66, 0, 16), Position = UDim2.new(0, 66, 0, 34), BackgroundTransparency = 1, Text = "Deep Sea LARP Hub  |  Key System", TextColor3 = MUT, Font = FM, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left}, kepala)
 	local garisK = mk("Frame", {Size = UDim2.new(1, 0, 0, 2), BackgroundColor3 = TXT, BorderSizePixel = 0, LayoutOrder = 2}, kotak)
-	grad(garisK, {{0, Color3.fromRGB(240, 50, 62)}, {1, Color3.fromRGB(30, 30, 34)}}, 0)
+	grad(garisK, {{0, Color3.fromRGB(30, 232, 216)}, {1, Color3.fromRGB(10, 40, 62)}}, 0)
 	local info = mk("TextLabel", {Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1, Text = "Masukkan key kamu untuk membuka script.", TextColor3 = MUT, Font = FM, TextSize = 12, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Center, LayoutOrder = 3}, kotak)
 	-- kolom input
 	local kolom = mk("Frame", {Size = UDim2.new(1, 0, 0, 50), BackgroundColor3 = ROW, BorderSizePixel = 0, LayoutOrder = 4}, kotak)
@@ -12096,7 +12213,7 @@ function F.bangunKey()
 	local masuk = mk("TextButton", {Size = UDim2.new(0.34, -7, 1, 0), BackgroundColor3 = ACT, Text = "MASUK", TextColor3 = TXT, Font = FB, TextSize = 14, AutoButtonColor = false, LayoutOrder = 1}, baris)
 	rnd(masuk, 12)
 	grad(masuk, {{0, TXT}, {1, Color3.fromRGB(150, 150, 150)}}, 90)
-	mk("UIStroke", {Color = Color3.fromRGB(255, 120, 128), Thickness = 1, Transparency = 0.5}, masuk)
+	mk("UIStroke", {Color = Color3.fromRGB(120, 242, 236), Thickness = 1, Transparency = 0.5}, masuk)
 	local keluar = mk("TextButton", {Size = UDim2.new(0.28, -6, 1, 0), BackgroundColor3 = BTN, Text = "KELUAR", TextColor3 = MUT, Font = FB, TextSize = 14, AutoButtonColor = false, LayoutOrder = 3}, baris)
 	rnd(keluar, 12)
 	mk("UIStroke", {Color = BRD, Thickness = 1}, keluar)
@@ -12108,21 +12225,21 @@ function F.bangunKey()
 	end
 	efekTekan(masuk); efekTekan(keluar)
 	local foot = mk("Frame", {Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, LayoutOrder = 6}, kotak)
-	mk("TextLabel", {Size = UDim2.new(1, 0, 0, 14), BackgroundTransparency = 1, Text = "KZ KRONOZ  |  version 1.6", TextColor3 = MUT, Font = FM, TextSize = 10}, foot)
+	mk("TextLabel", {Size = UDim2.new(1, 0, 0, 14), BackgroundTransparency = 1, Text = "OG OCTAGRUB  |  version 1.0", TextColor3 = MUT, Font = FM, TextSize = 10}, foot)
 	local hwTeks = F.hwid()
 	if #hwTeks > 12 then hwTeks = string.sub(hwTeks, 1, 6) .. "..." .. string.sub(hwTeks, -4) end
-	mk("TextLabel", {Size = UDim2.new(1, 0, 0, 12), Position = UDim2.new(0, 0, 0, 16), BackgroundTransparency = 1, Text = "ID perangkat: " .. hwTeks, TextColor3 = Color3.fromRGB(100, 100, 106), Font = FM, TextSize = 9}, foot)
+	mk("TextLabel", {Size = UDim2.new(1, 0, 0, 12), Position = UDim2.new(0, 0, 0, 16), BackgroundTransparency = 1, Text = "ID perangkat: " .. hwTeks, TextColor3 = Color3.fromRGB(90, 134, 154), Font = FM, TextSize = 9}, foot)
 	local tier, keluarDipilih, sibuk = nil, false, false
 	local TEKS_AWAL = "Masukkan key kamu untuk membuka script."
 	local function pesan(teks, warna) info.Text = teks; info.TextColor3 = warna end
 	if pesanAwal then pesan(pesanAwal, Color3.fromRGB(255, 100, 100)) end
-	local TEKS_GK = '<font size="15"><b>GET KEY</b></font>\n<font size="9" color="rgb(255,210,210)">GRATIS</font>'
+	local TEKS_GK = '<font size="15"><b>GET KEY</b></font>\n<font size="9" color="rgb(200,250,248)">GRATIS</font>'
 	local getkey = mk("TextButton", {Size = UDim2.new(0.38, -7, 1, 0), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, LayoutOrder = 2}, baris)
 	rnd(getkey, 12)
 	local gkBg = mk("Frame", {Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = TXT, BorderSizePixel = 0}, getkey)
 	rnd(gkBg, 12)
-	mk("UIGradient", {Color = ColorSequence.new(Color3.fromRGB(240, 52, 64), Color3.fromRGB(105, 12, 20)), Rotation = 90}, gkBg)
-	local gkStroke = mk("UIStroke", {Color = Color3.fromRGB(255, 130, 138), Thickness = 1.5, Transparency = 0.1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border}, getkey)
+	mk("UIGradient", {Color = ColorSequence.new(Color3.fromRGB(0, 196, 194), Color3.fromRGB(0, 82, 122)), Rotation = 90}, gkBg)
+	local gkStroke = mk("UIStroke", {Color = Color3.fromRGB(130, 246, 240), Thickness = 1.5, Transparency = 0.1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border}, getkey)
 	local gkScale = mk("UIScale", {Scale = 1}, getkey)
 	local gkTxt = mk("TextLabel", {Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, RichText = true, Text = TEKS_GK, TextColor3 = TXT, Font = FB, TextSize = 14, ZIndex = 2}, getkey)
 	getkey.MouseButton1Down:Connect(function() TS:Create(gkScale, TweenInfo.new(0.08, Enum.EasingStyle.Quad), {Scale = 0.94}):Play() end)
@@ -12153,7 +12270,7 @@ function F.bangunKey()
 			else
 				pesan("Buka manual: " .. url, Color3.fromRGB(255, 190, 90))
 			end
-			F.notif("KRONOZ", disalin and "Link get key disalin" or "Link get key tidak bisa disalin", 3)
+			F.notif("OCTAGRUB", disalin and "Link get key disalin" or "Link get key tidak bisa disalin", 3)
 			task.wait(1.2)
 			if gkTxt.Parent then gkTxt.Text = TEKS_GK end
 			gkSibuk = false
@@ -12168,7 +12285,7 @@ function F.bangunKey()
 		if role then
 			local t = F.tierDariRole(role)
 			F.keySimpan((string.gsub(box.Text, "%s+", "")))
-			print("[KRONOZ] Key valid. Role: " .. string.upper(t))
+			print("[OCTAGRUB] Key valid. Role: " .. string.upper(t))
 			pesan("Key valid. Role: " .. string.upper(t), Color3.fromRGB(95, 215, 135))
 			masuk.Text = "BERHASIL"; masuk.BackgroundColor3 = Color3.fromRGB(40, 150, 85)
 			pcall(function() gS.Color = ColorSequence.new(Color3.fromRGB(70, 210, 120)) end)
@@ -12218,8 +12335,8 @@ end
 -- satu instance saja: kalau script dijalankan ulang, instance lama dimatikan (loop pantau dan centang berhenti, badgenya dibersihkan)
 do
     local G = (getgenv and getgenv()) or _G
-    if type(G.KRONOZ_MATI) == "function" then pcall(G.KRONOZ_MATI) end
-    G.KRONOZ_MATI = function()
+    if type(G.OCTAGRUB_MATI) == "function" then pcall(G.OCTAGRUB_MATI) end
+    G.OCTAGRUB_MATI = function()
         S.mati = true; S.alive = false; S.centang = false
         pcall(F.bersihBadge)
         pcall(F.prevBersihSemua)
@@ -12245,7 +12362,7 @@ end, function(e)
 end)
 
 if not ok then
-    warn("[KRONOZ] UI ERROR: " .. tostring(err))
+    warn("[OCTAGRUB] UI ERROR: " .. tostring(err))
     -- kalau build UI sempat gagal di tengah jalan, tetap paksa panel yang sudah jadi terlihat
     pcall(function()
         local g = S.ui and S.ui.gui
@@ -12256,8 +12373,8 @@ if not ok then
             end
         end
     end)
-    F.notif("KRONOZ ERROR", tostring(err):sub(1, 190), 15)
+    F.notif("OCTAGRUB ERROR", tostring(err):sub(1, 190), 15)
     local p = me:WaitForChild("PlayerGui")
     local g = Instance.new("ScreenGui", p); g.Name = "ZenoxError"
-    local t = Instance.new("TextButton", g); t.Size = UDim2.new(0.85, 0, 0, 200); t.Position = UDim2.new(0.075, 0, 0.5, -100); t.BackgroundColor3 = BLK; t.TextColor3 = BAD; t.Font = Enum.Font.Code; t.TextSize = 11; t.TextWrapped = true; t.Text = "KRONOZ ERROR:\n" .. tostring(err); t.Parent = g
+    local t = Instance.new("TextButton", g); t.Size = UDim2.new(0.85, 0, 0, 200); t.Position = UDim2.new(0.075, 0, 0.5, -100); t.BackgroundColor3 = BLK; t.TextColor3 = BAD; t.Font = Enum.Font.Code; t.TextSize = 11; t.TextWrapped = true; t.Text = "OCTAGRUB ERROR:\n" .. tostring(err); t.Parent = g
 end
