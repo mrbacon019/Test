@@ -212,111 +212,108 @@ function F.gelembungMuncul(mini)
 end
 
 
--- maskot: gurita kecil, berkedip, melayang, tentakel melambai. Ketuk = bicara + semburan gelembung
-function F.gurita(root)
-	local KATA = {"blub blub~", "LARP mode: ON", "stay deep, stay fake", "ink-credible fit!", "*blub blub blub*", "octa-approved", "dive deeper~", "8 tentacles, 0 regrets"}
-	local rng = Random.new()
-	local SINE, IO = Enum.EasingStyle.Sine, Enum.EasingDirection.InOut
-	local m = Instance.new("TextButton")
-	m.Name = "OG_Gurita"; m.Text = ""; m.AutoButtonColor = false; m.BackgroundTransparency = 1; m.BorderSizePixel = 0
-	m:SetAttribute("zxTab", true)
-	m.AnchorPoint = Vector2.new(1, 1); m.Position = UDim2.new(1, -16, 1, -6); m.Size = UDim2.new(0, 46, 0, 44); m.ZIndex = 45; m.Parent = root
-	local sc = Instance.new("UIScale"); sc.Parent = m
-	local bob = Instance.new("Frame"); bob.BackgroundTransparency = 1; bob.BorderSizePixel = 0; bob.Active = false
-	bob.Size = UDim2.new(1, 0, 1, 0); bob.ZIndex = 45; bob.Parent = m
-	TS:Create(bob, TweenInfo.new(1.6, SINE, IO, -1, true), {Position = UDim2.new(0, 0, 0, -4)}):Play()
-	local function kotak(w, h, x, y, warna, r, z)
-		local f = Instance.new("Frame"); f.BorderSizePixel = 0; f.Active = false; f.AnchorPoint = Vector2.new(0.5, 0.5)
-		f.Size = UDim2.new(0, w, 0, h); f.Position = UDim2.new(0, x, 0, y); f.BackgroundColor3 = warna; f.ZIndex = z or 46; f.Parent = bob
-		local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, r); c.Parent = f
-		return f
+
+-- LOADING SCREEN: porthole berputar, bar gelombang, status berganti, gelembung dan sinar laut.
+-- Dipasang di boot: F.loadingH.akhir() menunggu bar penuh lalu memudar.
+function F.loadingMulai()
+	local pg = me:WaitForChild("PlayerGui")
+	local lama = pg:FindFirstChild("OG_Loading"); if lama then lama:Destroy() end
+	local gui = Instance.new("ScreenGui"); gui.Name = "OG_Loading"; gui.ResetOnSpawn = false; gui.IgnoreGuiInset = true; gui.DisplayOrder = 5000; gui.Parent = pg
+	local cg = Instance.new("CanvasGroup"); cg.Size = UDim2.new(1, 0, 1, 0); cg.BackgroundTransparency = 1; cg.BorderSizePixel = 0; cg.Parent = gui
+	local air = Instance.new("Frame"); air.Size = UDim2.new(1, 0, 1, 0); air.BorderSizePixel = 0; air.BackgroundColor3 = Color3.new(1, 1, 1); air.Active = true; air.Parent = cg
+	local ag = Instance.new("UIGradient"); ag.Rotation = 90
+	ag.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(6, 90, 128)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(3, 38, 64)), ColorSequenceKeypoint.new(1, Color3.fromRGB(1, 10, 22))})
+	ag.Parent = air
+	F.sinarLaut(cg, 2); F.gelembung(cg, 28, 3)
+	-- ombak di dasar layar
+	for i = 1, 2 do
+		local w = Instance.new("Frame"); w.BorderSizePixel = 0; w.Active = false; w.BackgroundColor3 = Color3.fromRGB(40, 206, 214); w.BackgroundTransparency = 0.84 + i * 0.03
+		w.Size = UDim2.new(1.4, 0, 0, 140); w.Position = UDim2.new(-0.4, 0, 1, -64 + i * 18); w.ZIndex = 4; w.Parent = cg
+		local wc = Instance.new("UICorner"); wc.CornerRadius = UDim.new(0, 70); wc.Parent = w
+		TS:Create(w, TweenInfo.new(2.6 + i * 1.1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Position = UDim2.new(0, 0, 1, -64 + i * 18)}):Play()
 	end
-	-- tentakel (dibuat dulu supaya kepala menutup pangkalnya)
-	for i = 1, 5 do
-		local t = kotak(8, 18, 9 + (i - 1) * 7, 33, Color3.fromRGB(222, 124, 214), 4, 46)
-		t.AnchorPoint = Vector2.new(0.5, 0)
-		t.Position = UDim2.new(0, 9 + (i - 1) * 7, 0, 24)
-		local sudut = (i == 1 or i == 5) and 18 or 12
-		t.Rotation = (i % 2 == 0) and -sudut or sudut
-		TS:Create(t, TweenInfo.new(0.8 + i * 0.11, SINE, IO, -1, true), {Rotation = (i % 2 == 0) and sudut or -sudut}):Play()
-	end
-	local kepala = kotak(34, 34, 23, 17, Color3.new(1, 1, 1), 99, 47)
-	local g = Instance.new("UIGradient"); g.Rotation = 90
-	g.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(206, 142, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 150, 200))})
-	g.Parent = kepala
-	local kilau = kotak(7, 4, 14, 7, Color3.new(1, 1, 1), 2, 48); kilau.BackgroundTransparency = 0.45; kilau.Rotation = -25
-	local pipiK = kotak(6, 5, 11, 24, Color3.fromRGB(255, 110, 150), 3, 48); pipiK.BackgroundTransparency = 0.45
-	local pipiA = kotak(6, 5, 35, 24, Color3.fromRGB(255, 110, 150), 3, 48); pipiA.BackgroundTransparency = 0.45
-	local mata1 = kotak(10, 10, 16, 16, Color3.new(1, 1, 1), 5, 49)
-	local mata2 = kotak(10, 10, 30, 16, Color3.new(1, 1, 1), 5, 49)
-	for _, mt in ipairs({mata1, mata2}) do
-		local p = Instance.new("Frame"); p.BorderSizePixel = 0; p.Active = false; p.AnchorPoint = Vector2.new(0.5, 0.5)
-		p.Size = UDim2.new(0, 5, 0, 5); p.Position = UDim2.new(0.5, 0, 0.58, 0); p.BackgroundColor3 = Color3.fromRGB(30, 24, 66); p.ZIndex = 50; p.Parent = mt
-		local pc = Instance.new("UICorner"); pc.CornerRadius = UDim.new(1, 0); pc.Parent = p
-		local pk = Instance.new("Frame"); pk.BorderSizePixel = 0; pk.Active = false; pk.Size = UDim2.new(0, 2, 0, 2); pk.Position = UDim2.new(0.5, 0, 0.1, 0)
-		pk.BackgroundColor3 = Color3.new(1, 1, 1); pk.ZIndex = 51; pk.Parent = p
-		local kc = Instance.new("UICorner"); kc.CornerRadius = UDim.new(1, 0); kc.Parent = pk
-	end
-	kotak(6, 4, 23, 26, Color3.fromRGB(120, 48, 110), 3, 49)
-	-- kedip
+	local mid = Instance.new("Frame"); mid.BackgroundTransparency = 1; mid.AnchorPoint = Vector2.new(0.5, 0.5); mid.Position = UDim2.new(0.5, 0, 0.5, -10)
+	mid.Size = UDim2.new(0, 300, 0, 250); mid.ZIndex = 10; mid.Parent = cg
+	-- porthole + cincin putar
+	local ring = Instance.new("Frame"); ring.BackgroundTransparency = 1; ring.AnchorPoint = Vector2.new(0.5, 0); ring.Size = UDim2.new(0, 104, 0, 104); ring.Position = UDim2.new(0.5, 0, 0, 0); ring.Parent = mid
+	local rc = Instance.new("UICorner"); rc.CornerRadius = UDim.new(1, 0); rc.Parent = ring
+	local rs = Instance.new("UIStroke"); rs.Color = Color3.new(1, 1, 1); rs.Thickness = 4; rs.Parent = ring
+	local rg = Instance.new("UIGradient")
+	rg.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(40, 232, 216)), ColorSequenceKeypoint.new(1, Color3.fromRGB(180, 255, 250))})
+	rg.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.45, 0.15), NumberSequenceKeypoint.new(0.55, 1), NumberSequenceKeypoint.new(1, 1)})
+	rg.Parent = rs
+	TS:Create(rg, TweenInfo.new(1.5, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, -1), {Rotation = 360}):Play()
+	local disc = Instance.new("Frame"); disc.AnchorPoint = Vector2.new(0.5, 0.5); disc.Position = UDim2.new(0.5, 0, 0.5, 0); disc.Size = UDim2.new(0, 80, 0, 80)
+	disc.BackgroundColor3 = Color3.fromRGB(2, 18, 34); disc.BorderSizePixel = 0; disc.Parent = ring
+	local dc = Instance.new("UICorner"); dc.CornerRadius = UDim.new(1, 0); dc.Parent = disc
+	local ds = Instance.new("UIStroke"); ds.Color = Color3.fromRGB(70, 236, 224); ds.Thickness = 1.5; ds.Transparency = 0.5; ds.Parent = disc
+	local dsk = Instance.new("UIScale"); dsk.Parent = disc
+	TS:Create(dsk, TweenInfo.new(1.1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Scale = 1.07}):Play()
+	local og = Instance.new("TextLabel"); og.BackgroundTransparency = 1; og.Size = UDim2.new(1, 0, 1, 0); og.Text = "OG"; og.TextColor3 = Color3.new(1, 1, 1)
+	og.Font = Enum.Font.GothamBlack; og.TextSize = 30; og.Parent = disc
+	local ogg = Instance.new("UIGradient"); ogg.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 206, 196)), ColorSequenceKeypoint.new(1, Color3.new(1, 1, 1))}); ogg.Rotation = 60; ogg.Parent = og
+	-- judul
+	local jd = Instance.new("TextLabel"); jd.BackgroundTransparency = 1; jd.Size = UDim2.new(1, 0, 0, 40); jd.Position = UDim2.new(0, 0, 0, 118)
+	jd.Text = "OCTAGRUB"; jd.TextColor3 = Color3.new(1, 1, 1); jd.Font = Enum.Font.GothamBlack; jd.TextSize = 34; jd.Parent = mid
+	local jg = Instance.new("UIGradient"); jg.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 206, 196)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(150, 245, 240)), ColorSequenceKeypoint.new(1, Color3.new(1, 1, 1))}); jg.Parent = jd
+	local tg = Instance.new("TextLabel"); tg.BackgroundTransparency = 1; tg.Size = UDim2.new(1, 0, 0, 14); tg.Position = UDim2.new(0, 0, 0, 158)
+	tg.Text = "D I V E   I N T O   T H E   L A R P"; tg.TextColor3 = Color3.fromRGB(135, 190, 208); tg.Font = Enum.Font.GothamMedium; tg.TextSize = 10; tg.Parent = mid
+	-- bar
+	local bar = Instance.new("Frame"); bar.BackgroundTransparency = 1; bar.AnchorPoint = Vector2.new(0.5, 0); bar.Position = UDim2.new(0.5, 0, 0, 192); bar.Size = UDim2.new(0, 260, 0, 40); bar.Parent = mid
+	local tr = Instance.new("Frame"); tr.BorderSizePixel = 0; tr.BackgroundColor3 = Color3.fromRGB(6, 40, 64); tr.Size = UDim2.new(1, 0, 0, 9); tr.ClipsDescendants = true; tr.Parent = bar
+	local trc = Instance.new("UICorner"); trc.CornerRadius = UDim.new(1, 0); trc.Parent = tr
+	local trs = Instance.new("UIStroke"); trs.Color = Color3.fromRGB(22, 92, 122); trs.Thickness = 1; trs.Parent = tr
+	local fill = Instance.new("Frame"); fill.BorderSizePixel = 0; fill.BackgroundColor3 = Color3.new(1, 1, 1); fill.Size = UDim2.new(0, 0, 1, 0); fill.Parent = tr
+	local fc = Instance.new("UICorner"); fc.CornerRadius = UDim.new(1, 0); fc.Parent = fill
+	local fg = Instance.new("UIGradient"); fg.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 170, 190)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(70, 240, 226)), ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 170, 190))}); fg.Parent = fill
+	TS:Create(fg, TweenInfo.new(1.2, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, -1), {Offset = Vector2.new(1, 0)}):Play()
+	fg.Offset = Vector2.new(-1, 0)
+	local st = Instance.new("TextLabel"); st.BackgroundTransparency = 1; st.Position = UDim2.new(0, 0, 0, 15); st.Size = UDim2.new(0.78, 0, 0, 16)
+	st.TextXAlignment = Enum.TextXAlignment.Left; st.TextColor3 = Color3.fromRGB(150, 205, 222); st.Font = Enum.Font.GothamMedium; st.TextSize = 11; st.Text = "Menyelam ke laut dalam..."; st.Parent = bar
+	local pc = Instance.new("TextLabel"); pc.BackgroundTransparency = 1; pc.Position = UDim2.new(0.78, 0, 0, 15); pc.Size = UDim2.new(0.22, 0, 0, 16)
+	pc.TextXAlignment = Enum.TextXAlignment.Right; pc.TextColor3 = Color3.fromRGB(110, 240, 232); pc.Font = Enum.Font.GothamBold; pc.TextSize = 11; pc.Text = "0%"; pc.Parent = bar
+	-- logika progres
+	local LANGKAH = {{0, "Menyelam ke laut dalam..."}, {0.25, "Mengumpulkan gelembung..."}, {0.5, "Menyiapkan aksesoris..."}, {0.75, "Menata terumbu karang..."}, {0.92, "Hampir sampai..."}}
+	local MIN = 2.8
+	local t0 = os.clock()
+	local p = 0
+	local H = {}
 	task.spawn(function()
-		while m.Parent do
-			task.wait(rng:NextNumber(2.5, 5))
-			for _, mt in ipairs({mata1, mata2}) do TS:Create(mt, TweenInfo.new(0.07), {Size = UDim2.new(0, 10, 0, 2)}):Play() end
-			task.wait(0.1)
-			for _, mt in ipairs({mata1, mata2}) do TS:Create(mt, TweenInfo.new(0.09), {Size = UDim2.new(0, 10, 0, 10)}):Play() end
+		while gui.Parent and not H.fin do
+			local dt = RS.Heartbeat:Wait()
+			local target = H.minta and 1 or math.min(0.9, (os.clock() - t0) / MIN * 0.9)
+			p = p + (target - p) * math.clamp(dt * 5, 0, 1)
+			fill.Size = UDim2.new(math.clamp(p, 0, 1), 0, 1, 0)
+			pc.Text = math.floor(math.clamp(p, 0, 1) * 100 + 0.5) .. "%"
+			local teks = LANGKAH[1][2]
+			for _, l in ipairs(LANGKAH) do if p >= l[1] then teks = l[2] end end
+			if H.minta and p > 0.985 then teks = "Siap! Selamat menyelam" end
+			st.Text = teks
 		end
 	end)
-	local sibuk = false
-	local function bicara(teks)
-		if sibuk then return end
-		sibuk = true
-		local b = Instance.new("TextLabel")
-		b.AutomaticSize = Enum.AutomaticSize.X; b.Size = UDim2.new(0, 0, 0, 22); b.AnchorPoint = Vector2.new(1, 1); b.Position = UDim2.new(0, -4, 0, 6)
-		b.BackgroundColor3 = Color3.fromRGB(226, 252, 252); b.TextColor3 = Color3.fromRGB(6, 44, 66); b.Font = Enum.Font.GothamMedium; b.TextSize = 11
-		b.Text = teks; b.ZIndex = 52; b.BorderSizePixel = 0; b.Active = false; b.Parent = m
-		local bp = Instance.new("UIPadding"); bp.PaddingLeft = UDim.new(0, 10); bp.PaddingRight = UDim.new(0, 10); bp.Parent = b
-		local bc = Instance.new("UICorner"); bc.CornerRadius = UDim.new(0, 11); bc.Parent = b
-		local bs = Instance.new("UIStroke"); bs.Color = Color3.fromRGB(40, 206, 204); bs.Thickness = 1.2; bs.Parent = b
-		task.delay(2.3, function()
-			if b.Parent then
-				TS:Create(b, TweenInfo.new(0.3), {BackgroundTransparency = 1, TextTransparency = 1}):Play()
-				TS:Create(bs, TweenInfo.new(0.3), {Transparency = 1}):Play()
-				task.wait(0.32); b:Destroy()
-			end
-			sibuk = false
-		end)
-	end
-	local function semburan()
-		for i = 1, 6 do
-			local u = rng:NextInteger(4, 8)
-			local x = 23 + rng:NextInteger(-8, 8)
-			local f = Instance.new("Frame"); f.BorderSizePixel = 0; f.Active = false; f.AnchorPoint = Vector2.new(0.5, 0.5)
-			f.Size = UDim2.new(0, u, 0, u); f.Position = UDim2.new(0, x, 0, 6); f.BackgroundColor3 = Color3.fromRGB(170, 248, 244)
-			f.BackgroundTransparency = 0.35; f.ZIndex = 52; f.Parent = m
-			local fc = Instance.new("UICorner"); fc.CornerRadius = UDim.new(1, 0); fc.Parent = f
-			local fs = Instance.new("UIStroke"); fs.Color = Color3.fromRGB(220, 255, 252); fs.Thickness = 1; fs.Parent = f
-			local d = rng:NextNumber(0.9, 1.5)
-			TS:Create(f, TweenInfo.new(d, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {Position = UDim2.new(0, x + rng:NextInteger(-18, 18), 0, -46 - rng:NextInteger(0, 18)), BackgroundTransparency = 1}):Play()
-			TS:Create(fs, TweenInfo.new(d), {Transparency = 1}):Play()
-			task.delay(d + 0.05, function() f:Destroy() end)
+	-- dipanggil saat UI sudah dibangun: tunggu bar penuh, lalu pudar
+	H.akhir = function(paksa)
+		H.minta = true
+		if not paksa then
+			local mulai = os.clock()
+			while gui.Parent and (os.clock() - t0 < MIN or p < 0.985) and os.clock() - mulai < 6 do task.wait(0.05) end
+			task.wait(0.35)
 		end
+		if gui.Parent then
+			TS:Create(cg, TweenInfo.new(0.7, Enum.EasingStyle.Quad), {GroupTransparency = 1}):Play()
+			TS:Create(mid, TweenInfo.new(0.7, Enum.EasingStyle.Quad), {Position = UDim2.new(0.5, 0, 0.5, -40)}):Play()
+			task.wait(0.75)
+		end
+		H.fin = true
+		pcall(function() gui:Destroy() end)
 	end
-	m.MouseButton1Click:Connect(function()
-		TS:Create(sc, TweenInfo.new(0.12, Enum.EasingStyle.Quad), {Scale = 1.2}):Play()
-		task.delay(0.12, function() TS:Create(sc, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play() end)
-		semburan()
-		bicara(KATA[rng:NextInteger(1, #KATA)])
-	end)
-	task.delay(1.4, function() if m.Parent then bicara("Halo! Aku Octa~") end end)
-	return m
+	return H
 end
 
 -- seluruh efek laut untuk jendela utama (dipanggil setelah semua panel dibuat)
 function F.lautJendela(root)
 	F.sinarLaut(root, 29)
 	F.gelembung(root, 16, 30)
-	F.gurita(root)
 end
 
 -- =====================================================================
@@ -10432,10 +10429,9 @@ function F.pgFakeMaint(page)
 	local n = 0
 	local function nx() n = n + 1; return n end
 	mk("TextLabel", {Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1, Text = "Fake Profil", TextColor3 = TXT, Font = Enum.Font.GothamMedium, TextSize = 20, TextXAlignment = Enum.TextXAlignment.Left, LayoutOrder = nx()}, page)
-	local kartu = mk("Frame", {Size = UDim2.new(1, 0, 0, 110), BackgroundColor3 = ROW, BorderSizePixel = 0, LayoutOrder = nx()}, page)
+	local kartu = mk("Frame", {Size = UDim2.new(1, 0, 0, 72), BackgroundColor3 = ROW, BorderSizePixel = 0, LayoutOrder = nx()}, page)
 	rnd(kartu)
-	mk("TextLabel", {Size = UDim2.new(1, -24, 0, 28), Position = UDim2.new(0, 12, 0, 16), BackgroundTransparency = 1, Text = "SEDANG MAINTENANCE", TextColor3 = OR, Font = FB, TextSize = 16, TextXAlignment = Enum.TextXAlignment.Left}, kartu)
-	mk("TextLabel", {Size = UDim2.new(1, -24, 0, 46), Position = UDim2.new(0, 12, 0, 48), BackgroundTransparency = 1, Text = "Fitur Fake Profil dikunci sementara dan belum bisa dipakai. Silakan coba lagi nanti.", TextColor3 = MUT, Font = FM, TextSize = 12, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top}, kartu)
+	mk("TextLabel", {Size = UDim2.new(1, -24, 0, 40), Position = UDim2.new(0, 12, 0, 16), BackgroundTransparency = 1, Text = "This feature not available in this time", TextColor3 = OR, Font = FB, TextSize = 16, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left}, kartu)
 end
 
 local function pgFaker(page)
@@ -11742,7 +11738,7 @@ local function bangunUtama()
 		{key = "HAIR", ab = "HS", judul = "Hair & Shirt", desk = "Rambut, baju, dan celana"},
 		{key = "ANIM", ab = "AE", judul = "Animation & Emote", desk = "Emote dan paket animasi"},
 		{key = "CLONE", ab = "CA", judul = "Copy Ava", desk = "Copy avatar, fake verified, tiru outfit"},
-		{key = "FAKEP", ab = "FP", judul = "Fake Profil", desk = "Sedang maintenance"},
+		{key = "FAKEP", ab = "FP", judul = "Fake Profil", desk = "Not available"},
 			{key = "SHARE", ab = "SO", judul = "Share Outfit 2.0", desk = "Edit outfit pemain lain, hanya terlihat di layarmu"},
 		{key = "EVADE", ab = "EV", judul = "Evade Emote", desk = "Unlock semua emote & unusual Evade, visual saja"},
 		{key = "LARP", ab = "LI", judul = "Larp Ideas", desk = "Ide avatar larp 1-12"},
@@ -11882,7 +11878,7 @@ local function bangunUtama()
 	rnd(panel, 20); mk("UIStroke", {Color = Color3.fromRGB(22, 92, 122), Thickness = 1}, panel)
 	local crumb = mk("TextLabel", {Size = UDim2.new(1, -28, 0, 26), Position = UDim2.new(0, 14, 0, 8), BackgroundTransparency = 1, RichText = true, Text = "", TextColor3 = TXT, Font = FM, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd}, panel)
 	local holder = mk("Frame", {Position = UDim2.new(0, 0, 0, 40), Size = UDim2.new(1, 0, 1, -64), BackgroundTransparency = 1, ClipsDescendants = true}, panel)
-	S.ui.statusBox = mk("TextLabel", {Size = UDim2.new(1, -100, 0, 18), Position = UDim2.new(0, 14, 1, -22), BackgroundTransparency = 1, Text = "siap", TextColor3 = MUT, Font = FM, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd}, panel)
+	S.ui.statusBox = mk("TextLabel", {Size = UDim2.new(1, -28, 0, 18), Position = UDim2.new(0, 14, 1, -22), BackgroundTransparency = 1, Text = "siap", TextColor3 = MUT, Font = FM, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd}, panel)
 
 	local utama = {}
 	local function halamanBuat(key, parent, subNama)
@@ -12132,12 +12128,14 @@ do
         pcall(function() if S.evadeAPI then S.evadeAPI.Clean(); S.evadeAPI = nil; S.evadeOn = false end end)
     end
 end
+pcall(function() F.loadingH = F.loadingMulai() end)
 local ok, err = xpcall(function()
     task.wait(0.3)
     S.tier = "vvip"; S.premium = true
     for _, a in ipairs(C.AKSES) do F.addItem(a[1], a[2], "akses").builtin = true end
     for _, g in ipairs(C.GEAR) do F.addItem(g[1], g[2], "gear").builtin = true end
     bangunUtama()
+    if F.loadingH then task.spawn(F.loadingH.akhir) end
     task.spawn(F.centangSync)
     F.catat("akses penuh aktif")
     F.jalanPantau()
@@ -12150,6 +12148,7 @@ end, function(e)
 end)
 
 if not ok then
+    pcall(function() if F.loadingH then F.loadingH.akhir(true) end end)
     warn("[OCTAGRUB] UI ERROR: " .. tostring(err))
     -- kalau build UI sempat gagal di tengah jalan, tetap paksa panel yang sudah jadi terlihat
     pcall(function()
