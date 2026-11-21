@@ -213,96 +213,126 @@ end
 
 
 
--- LOADING SCREEN: porthole berputar, bar gelombang, status berganti, gelembung dan sinar laut.
--- Dipasang di boot: F.loadingH.akhir() menunggu bar penuh lalu memudar.
+-- LOADING: kartu laut di tengah layar (bukan layar penuh). Porthole berputar + riak sonar, bar bercahaya,
+-- sinar, gelembung, ombak, titik animasi. F.loadingH.akhir() menunggu bar penuh lalu memudar.
 function F.loadingMulai()
 	local pg = me:WaitForChild("PlayerGui")
 	local lama = pg:FindFirstChild("OG_Loading"); if lama then lama:Destroy() end
 	local gui = Instance.new("ScreenGui"); gui.Name = "OG_Loading"; gui.ResetOnSpawn = false; gui.IgnoreGuiInset = true; gui.DisplayOrder = 5000; gui.Parent = pg
-	local cg = Instance.new("CanvasGroup"); cg.Size = UDim2.new(1, 0, 1, 0); cg.BackgroundTransparency = 1; cg.BorderSizePixel = 0; cg.Parent = gui
-	local air = Instance.new("Frame"); air.Size = UDim2.new(1, 0, 1, 0); air.BorderSizePixel = 0; air.BackgroundColor3 = Color3.new(1, 1, 1); air.Active = true; air.Parent = cg
+	local card = Instance.new("CanvasGroup"); card.AnchorPoint = Vector2.new(0.5, 0.5); card.Position = UDim2.new(0.5, 0, 0.5, 0)
+	card.Size = UDim2.new(0, 380, 0, 300); card.BackgroundTransparency = 1; card.BorderSizePixel = 0; card.GroupTransparency = 1; card.Parent = gui
+	local csk = Instance.new("UIScale"); csk.Scale = 0.86; csk.Parent = card
+	TS:Create(card, TweenInfo.new(0.35, Enum.EasingStyle.Quad), {GroupTransparency = 0}):Play()
+	TS:Create(csk, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+	-- badan kartu
+	local air = Instance.new("Frame"); air.Size = UDim2.new(1, 0, 1, 0); air.BorderSizePixel = 0; air.BackgroundColor3 = Color3.new(1, 1, 1); air.Parent = card
+	local ac = Instance.new("UICorner"); ac.CornerRadius = UDim.new(0, 26); ac.Parent = air
+	local ak = Instance.new("UIStroke"); ak.Color = Color3.fromRGB(40, 206, 204); ak.Thickness = 1.5; ak.Parent = air
 	local ag = Instance.new("UIGradient"); ag.Rotation = 90
-	ag.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(6, 90, 128)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(3, 38, 64)), ColorSequenceKeypoint.new(1, Color3.fromRGB(1, 10, 22))})
+	ag.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(8, 96, 134)), ColorSequenceKeypoint.new(0.55, Color3.fromRGB(3, 40, 66)), ColorSequenceKeypoint.new(1, Color3.fromRGB(1, 12, 24))})
 	ag.Parent = air
-	F.sinarLaut(cg, 2); F.gelembung(cg, 28, 3)
-	-- ombak di dasar layar
+	-- lapisan efek (sedikit masuk dari tepi supaya tidak keluar dari sudut bulat)
+	local inner = Instance.new("Frame"); inner.BackgroundTransparency = 1; inner.BorderSizePixel = 0; inner.Active = false
+	inner.Position = UDim2.new(0, 5, 0, 5); inner.Size = UDim2.new(1, -10, 1, -10); inner.ClipsDescendants = true; inner.ZIndex = 1; inner.Parent = card
+	F.sinarLaut(inner, 2); F.gelembung(inner, 16, 3)
 	for i = 1, 2 do
-		local w = Instance.new("Frame"); w.BorderSizePixel = 0; w.Active = false; w.BackgroundColor3 = Color3.fromRGB(40, 206, 214); w.BackgroundTransparency = 0.84 + i * 0.03
-		w.Size = UDim2.new(1.4, 0, 0, 140); w.Position = UDim2.new(-0.4, 0, 1, -64 + i * 18); w.ZIndex = 4; w.Parent = cg
-		local wc = Instance.new("UICorner"); wc.CornerRadius = UDim.new(0, 70); wc.Parent = w
-		TS:Create(w, TweenInfo.new(2.6 + i * 1.1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Position = UDim2.new(0, 0, 1, -64 + i * 18)}):Play()
+		local w = Instance.new("Frame"); w.BorderSizePixel = 0; w.Active = false; w.BackgroundColor3 = Color3.fromRGB(40, 206, 214); w.BackgroundTransparency = 0.82 + i * 0.04
+		w.Size = UDim2.new(1.5, 0, 0, 90); w.Position = UDim2.new(-0.5, 0, 1, -34 + i * 12); w.ZIndex = 4; w.Parent = inner
+		local wc = Instance.new("UICorner"); wc.CornerRadius = UDim.new(0, 45); wc.Parent = w
+		TS:Create(w, TweenInfo.new(2.4 + i * 1.0, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Position = UDim2.new(0, 0, 1, -34 + i * 12)}):Play()
 	end
-	local mid = Instance.new("Frame"); mid.BackgroundTransparency = 1; mid.AnchorPoint = Vector2.new(0.5, 0.5); mid.Position = UDim2.new(0.5, 0, 0.5, -10)
-	mid.Size = UDim2.new(0, 300, 0, 250); mid.ZIndex = 10; mid.Parent = cg
+	local mid = Instance.new("Frame"); mid.BackgroundTransparency = 1; mid.Size = UDim2.new(1, 0, 1, 0); mid.ZIndex = 10; mid.Parent = card
+	-- riak sonar di belakang porthole
+	local PY = 70
+	local selesaiFlag = {}
+	for i = 1, 3 do
+		local rp = Instance.new("Frame"); rp.BackgroundTransparency = 1; rp.AnchorPoint = Vector2.new(0.5, 0.5); rp.Position = UDim2.new(0.5, 0, 0, PY); rp.Size = UDim2.new(0, 100, 0, 100); rp.Parent = mid
+		local rpc = Instance.new("UICorner"); rpc.CornerRadius = UDim.new(1, 0); rpc.Parent = rp
+		local rps = Instance.new("UIStroke"); rps.Color = Color3.fromRGB(90, 240, 230); rps.Thickness = 2; rps.Transparency = 1; rps.Parent = rp
+		local rpk = Instance.new("UIScale"); rpk.Parent = rp
+		task.spawn(function()
+			task.wait((i - 1) * 0.85)
+			while gui.Parent and not selesaiFlag.fin do
+				rpk.Scale = 1; rps.Transparency = 0.25
+				local ti = TweenInfo.new(2.55, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
+				TS:Create(rpk, ti, {Scale = 1.9}):Play(); TS:Create(rps, ti, {Transparency = 1}):Play()
+				task.wait(2.55)
+			end
+		end)
+	end
 	-- porthole + cincin putar
-	local ring = Instance.new("Frame"); ring.BackgroundTransparency = 1; ring.AnchorPoint = Vector2.new(0.5, 0); ring.Size = UDim2.new(0, 104, 0, 104); ring.Position = UDim2.new(0.5, 0, 0, 0); ring.Parent = mid
+	local ring = Instance.new("Frame"); ring.BackgroundTransparency = 1; ring.AnchorPoint = Vector2.new(0.5, 0.5); ring.Size = UDim2.new(0, 100, 0, 100); ring.Position = UDim2.new(0.5, 0, 0, PY); ring.Parent = mid
 	local rc = Instance.new("UICorner"); rc.CornerRadius = UDim.new(1, 0); rc.Parent = ring
 	local rs = Instance.new("UIStroke"); rs.Color = Color3.new(1, 1, 1); rs.Thickness = 4; rs.Parent = ring
 	local rg = Instance.new("UIGradient")
-	rg.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(40, 232, 216)), ColorSequenceKeypoint.new(1, Color3.fromRGB(180, 255, 250))})
+	rg.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(40, 232, 216)), ColorSequenceKeypoint.new(1, Color3.fromRGB(190, 255, 250))})
 	rg.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.45, 0.15), NumberSequenceKeypoint.new(0.55, 1), NumberSequenceKeypoint.new(1, 1)})
 	rg.Parent = rs
-	TS:Create(rg, TweenInfo.new(1.5, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, -1), {Rotation = 360}):Play()
-	local disc = Instance.new("Frame"); disc.AnchorPoint = Vector2.new(0.5, 0.5); disc.Position = UDim2.new(0.5, 0, 0.5, 0); disc.Size = UDim2.new(0, 80, 0, 80)
+	TS:Create(rg, TweenInfo.new(1.3, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, -1), {Rotation = 360}):Play()
+	local disc = Instance.new("Frame"); disc.AnchorPoint = Vector2.new(0.5, 0.5); disc.Position = UDim2.new(0.5, 0, 0.5, 0); disc.Size = UDim2.new(0, 78, 0, 78)
 	disc.BackgroundColor3 = Color3.fromRGB(2, 18, 34); disc.BorderSizePixel = 0; disc.Parent = ring
 	local dc = Instance.new("UICorner"); dc.CornerRadius = UDim.new(1, 0); dc.Parent = disc
 	local ds = Instance.new("UIStroke"); ds.Color = Color3.fromRGB(70, 236, 224); ds.Thickness = 1.5; ds.Transparency = 0.5; ds.Parent = disc
 	local dsk = Instance.new("UIScale"); dsk.Parent = disc
-	TS:Create(dsk, TweenInfo.new(1.1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Scale = 1.07}):Play()
+	TS:Create(dsk, TweenInfo.new(1.0, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Scale = 1.08}):Play()
 	local og = Instance.new("TextLabel"); og.BackgroundTransparency = 1; og.Size = UDim2.new(1, 0, 1, 0); og.Text = "OG"; og.TextColor3 = Color3.new(1, 1, 1)
-	og.Font = Enum.Font.GothamBlack; og.TextSize = 30; og.Parent = disc
+	og.Font = Enum.Font.GothamBlack; og.TextSize = 28; og.Parent = disc
 	local ogg = Instance.new("UIGradient"); ogg.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 206, 196)), ColorSequenceKeypoint.new(1, Color3.new(1, 1, 1))}); ogg.Rotation = 60; ogg.Parent = og
 	-- judul
-	local jd = Instance.new("TextLabel"); jd.BackgroundTransparency = 1; jd.Size = UDim2.new(1, 0, 0, 40); jd.Position = UDim2.new(0, 0, 0, 118)
-	jd.Text = "OCTAGRUB"; jd.TextColor3 = Color3.new(1, 1, 1); jd.Font = Enum.Font.GothamBlack; jd.TextSize = 34; jd.Parent = mid
+	local jd = Instance.new("TextLabel"); jd.BackgroundTransparency = 1; jd.Size = UDim2.new(1, 0, 0, 36); jd.Position = UDim2.new(0, 0, 0, 134)
+	jd.Text = "OCTAGRUB"; jd.TextColor3 = Color3.new(1, 1, 1); jd.Font = Enum.Font.GothamBlack; jd.TextSize = 30; jd.Parent = mid
 	local jg = Instance.new("UIGradient"); jg.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 206, 196)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(150, 245, 240)), ColorSequenceKeypoint.new(1, Color3.new(1, 1, 1))}); jg.Parent = jd
-	local tg = Instance.new("TextLabel"); tg.BackgroundTransparency = 1; tg.Size = UDim2.new(1, 0, 0, 14); tg.Position = UDim2.new(0, 0, 0, 158)
-	tg.Text = "D I V E   I N T O   T H E   L A R P"; tg.TextColor3 = Color3.fromRGB(135, 190, 208); tg.Font = Enum.Font.GothamMedium; tg.TextSize = 10; tg.Parent = mid
+	TS:Create(jg, TweenInfo.new(2.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Offset = Vector2.new(0.35, 0)}):Play()
+	local tg = Instance.new("TextLabel"); tg.BackgroundTransparency = 1; tg.Size = UDim2.new(1, 0, 0, 14); tg.Position = UDim2.new(0, 0, 0, 170)
+	tg.Text = "D I V E   I N T O   T H E   L A R P"; tg.TextColor3 = Color3.fromRGB(135, 190, 208); tg.Font = Enum.Font.GothamMedium; tg.TextSize = 9; tg.Parent = mid
 	-- bar
-	local bar = Instance.new("Frame"); bar.BackgroundTransparency = 1; bar.AnchorPoint = Vector2.new(0.5, 0); bar.Position = UDim2.new(0.5, 0, 0, 192); bar.Size = UDim2.new(0, 260, 0, 40); bar.Parent = mid
-	local tr = Instance.new("Frame"); tr.BorderSizePixel = 0; tr.BackgroundColor3 = Color3.fromRGB(6, 40, 64); tr.Size = UDim2.new(1, 0, 0, 9); tr.ClipsDescendants = true; tr.Parent = bar
+	local bar = Instance.new("Frame"); bar.BackgroundTransparency = 1; bar.AnchorPoint = Vector2.new(0.5, 0); bar.Position = UDim2.new(0.5, 0, 0, 198); bar.Size = UDim2.new(0, 290, 0, 40); bar.Parent = mid
+	local tr = Instance.new("Frame"); tr.BorderSizePixel = 0; tr.BackgroundColor3 = Color3.fromRGB(6, 40, 64); tr.Size = UDim2.new(1, 0, 0, 10); tr.ClipsDescendants = true; tr.Parent = bar
 	local trc = Instance.new("UICorner"); trc.CornerRadius = UDim.new(1, 0); trc.Parent = tr
 	local trs = Instance.new("UIStroke"); trs.Color = Color3.fromRGB(22, 92, 122); trs.Thickness = 1; trs.Parent = tr
-	local fill = Instance.new("Frame"); fill.BorderSizePixel = 0; fill.BackgroundColor3 = Color3.new(1, 1, 1); fill.Size = UDim2.new(0, 0, 1, 0); fill.Parent = tr
+	local fill = Instance.new("Frame"); fill.BorderSizePixel = 0; fill.BackgroundColor3 = Color3.new(1, 1, 1); fill.Size = UDim2.new(0, 0, 1, 0); fill.ClipsDescendants = true; fill.Parent = tr
 	local fc = Instance.new("UICorner"); fc.CornerRadius = UDim.new(1, 0); fc.Parent = fill
-	local fg = Instance.new("UIGradient"); fg.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 170, 190)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(70, 240, 226)), ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 170, 190))}); fg.Parent = fill
-	TS:Create(fg, TweenInfo.new(1.2, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, -1), {Offset = Vector2.new(1, 0)}):Play()
+	local fg = Instance.new("UIGradient"); fg.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 160, 184)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(80, 244, 230)), ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 160, 184))}); fg.Parent = fill
 	fg.Offset = Vector2.new(-1, 0)
-	local st = Instance.new("TextLabel"); st.BackgroundTransparency = 1; st.Position = UDim2.new(0, 0, 0, 15); st.Size = UDim2.new(0.78, 0, 0, 16)
-	st.TextXAlignment = Enum.TextXAlignment.Left; st.TextColor3 = Color3.fromRGB(150, 205, 222); st.Font = Enum.Font.GothamMedium; st.TextSize = 11; st.Text = "Menyelam ke laut dalam..."; st.Parent = bar
-	local pc = Instance.new("TextLabel"); pc.BackgroundTransparency = 1; pc.Position = UDim2.new(0.78, 0, 0, 15); pc.Size = UDim2.new(0.22, 0, 0, 16)
+	TS:Create(fg, TweenInfo.new(1.1, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, -1), {Offset = Vector2.new(1, 0)}):Play()
+	-- kilau yang menyapu bar
+	local kl = Instance.new("Frame"); kl.BorderSizePixel = 0; kl.BackgroundColor3 = Color3.new(1, 1, 1); kl.BackgroundTransparency = 0.55; kl.Rotation = 18
+	kl.AnchorPoint = Vector2.new(0.5, 0.5); kl.Size = UDim2.new(0, 14, 0, 26); kl.Position = UDim2.new(-0.1, 0, 0.5, 0); kl.ZIndex = 2; kl.Parent = tr
+	TS:Create(kl, TweenInfo.new(1.4, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut, -1), {Position = UDim2.new(1.1, 0, 0.5, 0)}):Play()
+	local st = Instance.new("TextLabel"); st.BackgroundTransparency = 1; st.Position = UDim2.new(0, 0, 0, 16); st.Size = UDim2.new(0.78, 0, 0, 16)
+	st.TextXAlignment = Enum.TextXAlignment.Left; st.TextColor3 = Color3.fromRGB(150, 205, 222); st.Font = Enum.Font.GothamMedium; st.TextSize = 11; st.Text = "Menyelam ke laut dalam"; st.Parent = bar
+	local pc = Instance.new("TextLabel"); pc.BackgroundTransparency = 1; pc.Position = UDim2.new(0.78, 0, 0, 16); pc.Size = UDim2.new(0.22, 0, 0, 16)
 	pc.TextXAlignment = Enum.TextXAlignment.Right; pc.TextColor3 = Color3.fromRGB(110, 240, 232); pc.Font = Enum.Font.GothamBold; pc.TextSize = 11; pc.Text = "0%"; pc.Parent = bar
-	-- logika progres
-	local LANGKAH = {{0, "Menyelam ke laut dalam..."}, {0.25, "Mengumpulkan gelembung..."}, {0.5, "Menyiapkan aksesoris..."}, {0.75, "Menata terumbu karang..."}, {0.92, "Hampir sampai..."}}
-	local MIN = 2.8
+	-- logika progres (lama: MIN detik)
+	local LANGKAH = {{0, "Menyelam ke laut dalam"}, {0.18, "Mengumpulkan gelembung"}, {0.36, "Menyiapkan aksesoris"}, {0.54, "Menata terumbu karang"}, {0.72, "Memanggil ikan-ikan"}, {0.9, "Hampir sampai"}}
+	local MIN = 7.5
 	local t0 = os.clock()
 	local p = 0
-	local H = {}
+	local H = selesaiFlag
 	task.spawn(function()
 		while gui.Parent and not H.fin do
 			local dt = RS.Heartbeat:Wait()
 			local target = H.minta and 1 or math.min(0.9, (os.clock() - t0) / MIN * 0.9)
-			p = p + (target - p) * math.clamp(dt * 5, 0, 1)
+			p = p + (target - p) * math.clamp(dt * 3.2, 0, 1)
 			fill.Size = UDim2.new(math.clamp(p, 0, 1), 0, 1, 0)
 			pc.Text = math.floor(math.clamp(p, 0, 1) * 100 + 0.5) .. "%"
 			local teks = LANGKAH[1][2]
 			for _, l in ipairs(LANGKAH) do if p >= l[1] then teks = l[2] end end
-			if H.minta and p > 0.985 then teks = "Siap! Selamat menyelam" end
-			st.Text = teks
+			if H.minta and p > 0.985 then st.Text = "Siap! Selamat menyelam" else st.Text = teks .. string.rep(".", math.floor(os.clock() * 3) % 4) end
 		end
 	end)
-	-- dipanggil saat UI sudah dibangun: tunggu bar penuh, lalu pudar
+	-- dipanggil sebelum UI utama dibangun: tunggu bar penuh, lalu kartu memudar
 	H.akhir = function(paksa)
 		H.minta = true
 		if not paksa then
 			local mulai = os.clock()
-			while gui.Parent and (os.clock() - t0 < MIN or p < 0.985) and os.clock() - mulai < 6 do task.wait(0.05) end
-			task.wait(0.35)
+			while gui.Parent and (os.clock() - t0 < MIN or p < 0.985) and os.clock() - mulai < 15 do task.wait(0.05) end
+			task.wait(0.4)
 		end
 		if gui.Parent then
-			TS:Create(cg, TweenInfo.new(0.7, Enum.EasingStyle.Quad), {GroupTransparency = 1}):Play()
-			TS:Create(mid, TweenInfo.new(0.7, Enum.EasingStyle.Quad), {Position = UDim2.new(0.5, 0, 0.5, -40)}):Play()
-			task.wait(0.75)
+			TS:Create(card, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {GroupTransparency = 1}):Play()
+			TS:Create(csk, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Scale = 0.88}):Play()
+			task.wait(0.55)
 		end
 		H.fin = true
 		pcall(function() gui:Destroy() end)
@@ -8555,6 +8585,13 @@ end
 -- kode unlock dari evade_unlock_all.txt, dimuat hanya saat toggle dinyalakan (tidak jalan otomatis, tidak mengganggu game lain)
 F.EVADE_SRC = [=====[
 local API = (function(...)
+-- Evade Unlock All (Visual) v15 
+-- Langsung unlock begitu di-load. Bisa di-ON/OFF dari script lain lewat _G.EVADE_UNLOCK:
+--   _G.EVADE_UNLOCK.Enable()   _G.EVADE_UNLOCK.Disable()
+--   _G.EVADE_UNLOCK.Toggle()   _G.EVADE_UNLOCK.IsOn()   _G.EVADE_UNLOCK.Clean()
+-- Opsi (isi SEBELUM loadstring, semua boleh dikosongkan):
+--   _G.EVADE_UNLOCK_AUTOSTART = false   -> jangan langsung aktif, tunggu Enable()
+--   _G.EVADE_UNLOCK_CONFIG = {Emote=true, Unusual=true, ...}  -> pilih kategori
 if not game:IsLoaded() then game.Loaded:Wait() end
 if _G.EVADE_UNLOCK_CLEAN then pcall(_G.EVADE_UNLOCK_CLEAN) end
 
@@ -10369,48 +10406,71 @@ end
 return API
 end)(...)
 ]=====]
+S.evadeCfg = S.evadeCfg or {Emote = true, Unusual = true, CarryAnimation = true, Nametag = true, Cosmetic = true, Character = true}
 function F.evadeAPI()
 	if S.evadeAPI then return true, S.evadeAPI end
+	local cfg = {}
+	for k, v in pairs(S.evadeCfg) do cfg[k] = v end
 	_G.EVADE_UNLOCK_AUTOSTART = false
-	_G.EVADE_UNLOCK_CONFIG = {Emote = true, Unusual = true, CarryAnimation = false, Nametag = false, Cosmetic = false, Character = false}
+	_G.EVADE_UNLOCK_CONFIG = cfg
 	local fn, err = loadstring(F.EVADE_SRC .. "\nreturn API")
-	if not fn then return false, "gagal memuat: " .. tostring(err) end
+	if not fn then
+		_G.EVADE_UNLOCK_AUTOSTART = nil; _G.EVADE_UNLOCK_CONFIG = nil
+		return false, "gagal memuat: " .. tostring(err)
+	end
 	local ok, api = pcall(fn)
-	_G.EVADE_UNLOCK_AUTOSTART = nil
-	_G.EVADE_UNLOCK_CONFIG = nil
+	_G.EVADE_UNLOCK_AUTOSTART = nil; _G.EVADE_UNLOCK_CONFIG = nil
 	if not ok or type(api) ~= "table" then return false, "gagal jalan: " .. tostring(api) end
 	S.evadeAPI = api
 	return true, api
 end
+-- ganti kategori unlock: source Evade membaca kategori saat dimuat, jadi dimuat ulang (status ON tetap)
+function F.evadeKategori(nama, v)
+	S.evadeCfg[nama] = v and true or false
+	local nyala = S.evadeOn == true
+	if S.evadeAPI then
+		pcall(S.evadeAPI.Clean); S.evadeAPI = nil
+	end
+	if nyala then
+		local ok, api = F.evadeAPI()
+		if ok then
+			local ok2, msg = api.Enable()
+			if ok2 == false then S.evadeOn = false; F.catat("evade: " .. tostring(msg)); F.notif("Evade Unlock All", tostring(msg), 4); return end
+		else
+			S.evadeOn = false; F.catat("evade: " .. tostring(api)); F.notif("Evade Unlock All", tostring(api), 4); return
+		end
+	end
+	F.catat("evade: " .. nama .. (v and " ON" or " OFF"))
+end
 function F.pgEvade(page)
 	local n = 0
 	local function nx() n = n + 1; return n end
-	mk("TextLabel", {Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1, Text = "Evade Emote", TextColor3 = TXT, Font = Enum.Font.GothamMedium, TextSize = 20, TextXAlignment = Enum.TextXAlignment.Left, LayoutOrder = nx()}, page)
-	local ket = mk("TextLabel", {Size = UDim2.new(1, 0, 0, 64), BackgroundColor3 = ROW, Text = "Khusus Evade. Nyalakan, lalu buka menu inventory: semua emote dan unusual bisa dipilih, dipasang di slot, dan dipakai. Hanya visual di layarmu, tidak ada yang benar-benar terbuka di akunmu.", TextColor3 = MUT, Font = FM, TextSize = 11, TextWrapped = true, LayoutOrder = nx()}, page)
-	rnd(ket)
-	F.togelDesk(page, nx, "Unlock semua emote & unusual", "Visual saja, hanya bekerja di Evade", function() return S.evadeOn == true end, function(v)
+	mk("TextLabel", {Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1, Text = "Evade Unlock All", TextColor3 = TXT, Font = Enum.Font.GothamMedium, TextSize = 20, TextXAlignment = Enum.TextXAlignment.Left, LayoutOrder = nx()}, page)
+	local ket = mk("TextLabel", {Size = UDim2.new(1, 0, 0, 70), BackgroundColor3 = ROW, Text = "Khusus Evade. Nyalakan, lalu buka menu inventory: emote, unusual, carry animation, nametag, cosmetic, dan karakter semuanya bisa dipilih dan dipasang. Visual saja (client side), tidak mengubah data akunmu.", TextColor3 = MUT, Font = FM, TextSize = 11, TextWrapped = true, LayoutOrder = nx()}, page)
+	rnd(ket); mk("UIPadding", {PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10)}, ket)
+	F.togelDesk(page, nx, "Unlock All", "Visual saja, hanya bekerja di Evade", function() return S.evadeOn == true end, function(v)
 		if v then
 			local ok, api = F.evadeAPI()
 			if not ok then
 				S.evadeOn = false
 				F.catat("evade: " .. tostring(api))
-				F.notif("Evade Emote", tostring(api), 4)
+				F.notif("Evade Unlock All", tostring(api), 4)
 				return
 			end
 			local ok2, msg = api.Enable()
 			if ok2 == false then
 				S.evadeOn = false
 				F.catat("evade: " .. tostring(msg))
-				F.notif("Evade Emote", tostring(msg), 4)
+				F.notif("Evade Unlock All", tostring(msg), 4)
 				return
 			end
 			S.evadeOn = true
-			F.catat("evade: unlock semua emote & unusual ON")
-			F.notif("Evade Emote", "ON. Buka menu inventory", 3)
+			F.catat("evade: unlock all ON")
+			F.notif("Evade Unlock All", "ON. Buka menu inventory", 3)
 		else
 			S.evadeOn = false
 			if S.evadeAPI then pcall(S.evadeAPI.Disable) end
-			F.catat("evade: unlock semua emote & unusual OFF")
+			F.catat("evade: unlock all OFF")
 		end
 	end)
 	local status = mk("TextLabel", {Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, Text = "", TextColor3 = MUT, Font = FM, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, LayoutOrder = nx()}, page)
@@ -10423,6 +10483,11 @@ function F.pgEvade(page)
 			status.Text = "OFF"
 		end
 	end)
+	mk("TextLabel", {Size = UDim2.new(1, 0, 0, 22), BackgroundTransparency = 1, Text = "KATEGORI YANG DIBUKA", TextColor3 = OR, Font = FB, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, LayoutOrder = nx()}, page)
+	for _, k in ipairs({{"Emote", "Semua emote"}, {"Unusual", "Semua unusual"}, {"CarryAnimation", "Animasi carry"}, {"Nametag", "Nametag"}, {"Cosmetic", "Cosmetic"}, {"Character", "Karakter"}}) do
+		local kunci = k[1]
+		F.togelDesk(page, nx, k[2], "Matikan kalau ada yang bermasalah", function() return S.evadeCfg[kunci] == true end, function(v) F.evadeKategori(kunci, v) end)
+	end
 end
 
 function F.pgFakeMaint(page)
@@ -11740,7 +11805,7 @@ local function bangunUtama()
 		{key = "CLONE", ab = "CA", judul = "Copy Ava", desk = "Copy avatar, fake verified, tiru outfit"},
 		{key = "FAKEP", ab = "FP", judul = "Fake Profil", desk = "Not available"},
 			{key = "SHARE", ab = "SO", judul = "Share Outfit 2.0", desk = "Edit outfit pemain lain, hanya terlihat di layarmu"},
-		{key = "EVADE", ab = "EV", judul = "Evade Emote", desk = "Unlock semua emote & unusual Evade, visual saja"},
+		{key = "EVADE", ab = "EV", judul = "Evade Unlock All", desk = "Unlock semua emote, unusual, nametag dan lainnya (visual)"},
 		{key = "LARP", ab = "LI", judul = "Larp Ideas", desk = "Ide avatar larp 1-12"},
 		
 		{key = "SHADER", ab = "SH", judul = "Shader", desk = "Langit Minecraft dan Shader HD Subuh"},
@@ -12134,8 +12199,8 @@ local ok, err = xpcall(function()
     S.tier = "vvip"; S.premium = true
     for _, a in ipairs(C.AKSES) do F.addItem(a[1], a[2], "akses").builtin = true end
     for _, g in ipairs(C.GEAR) do F.addItem(g[1], g[2], "gear").builtin = true end
+    if F.loadingH then F.loadingH.akhir() end
     bangunUtama()
-    if F.loadingH then task.spawn(F.loadingH.akhir) end
     task.spawn(F.centangSync)
     F.catat("akses penuh aktif")
     F.jalanPantau()
